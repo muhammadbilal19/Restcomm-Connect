@@ -14,11 +14,43 @@ var rcMod = angular.module('rcApp', [
   'angularFileUpload',
   'ngPasswordStrength',
   'nvd3',
-  'ngSanitize'
+  'ngSanitize',
+  'ui.router'
 ]);
 
-rcMod.config(['$routeProvider', '$locationProvider', function($routeProvider, $locationProvider) {
-  $routeProvider.
+rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $urlRouterProvider) {
+  $stateProvider.state('public',{
+    templateUrl:'templates/public-state.html'
+  });
+  $stateProvider.state('public.login',{
+    url:"/login",
+    templateUrl:'modules/login.html',
+    controller:'LoginCtrl',
+    parent:'public'
+  });
+  $stateProvider.state('public.registerinstance',{
+    parent:'public'
+  });
+  $stateProvider.state('restcomm',{
+    templateUrl:'templates/restcomm-state.html',
+    parent:'public'
+  });
+  //$stateProvider.state('restcomm.numbers',{}); //redirect to numbers/incoming
+  $stateProvider.state('restcomm.dashboard',{
+    url:'/dashboard',
+    templateUrl:'modules/dashboard.html',
+    controller: 'DashboardCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.numbers-incoming',{
+    url:'/numbers/incoming',
+    templateUrl:'modules/numbers-incoming.html',
+    controller:'NumbersCtrl',
+    parent:'restcomm'
+  });
+
+/*
+  .
     when('/login', {templateUrl: 'modules/login.html', controller: 'LoginCtrl'}).
     when('/profile', {templateUrl: 'modules/profile.html', controller: 'ProfileCtrl'}).
     when('/profile/:accountSid', {templateUrl: 'modules/profile.html', controller: 'ProfileCtrl'}).
@@ -50,7 +82,7 @@ rcMod.config(['$routeProvider', '$locationProvider', function($routeProvider, $l
     when('/usage', {templateUrl: 'modules/usage.html', controller: 'MainCtrl'}).
     when('/providers', {templateUrl: 'modules/providers.html', controller: 'MainCtrl'}).
     otherwise({redirectTo: '/dashboard'});
-
+*/
   // $locationProvider.html5Mode(true);
 }]);
 
