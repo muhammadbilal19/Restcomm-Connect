@@ -66,7 +66,7 @@ rcMod.controller('MenuCtrl', function($scope, $http, $resource, $rootScope, $loc
 
 });
 
-rcMod.controller('ProfileCtrl', function($scope, $resource, $routeParams, SessionService, RCommAccounts, md5) {
+rcMod.controller('ProfileCtrl', function($scope, $resource, $stateParams, SessionService, RCommAccounts, md5) {
   $scope.sid = SessionService.get('sid');
 
   var accountBackup;
@@ -139,7 +139,7 @@ rcMod.controller('ProfileCtrl', function($scope, $resource, $routeParams, Sessio
   $scope.getAccounts = function() {
     $scope.accounts = RCommAccounts.query(function(data){
       angular.forEach(data, function(value){
-        if(value.sid == $routeParams.accountSid) {
+        if(value.sid == $stateParams.accountSid) {
           $scope.account = angular.copy(value);
           accountBackup = angular.copy(value);
         }

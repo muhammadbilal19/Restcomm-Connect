@@ -33,21 +33,146 @@ rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $u
   });
   $stateProvider.state('restcomm',{
     templateUrl:'templates/restcomm-state.html',
-    parent:'public'
+    resolve: {
+        authorize: function (Identity) {return Identity.checkAccess();}
+    }
   });
-  //$stateProvider.state('restcomm.numbers',{}); //redirect to numbers/incoming
   $stateProvider.state('restcomm.dashboard',{
     url:'/dashboard',
     templateUrl:'modules/dashboard.html',
     controller: 'DashboardCtrl',
     parent:'restcomm'
   });
+  $urlRouterProvider.when('/numbers','/numbers/incoming'); //redirect to numbers/incoming
   $stateProvider.state('restcomm.numbers-incoming',{
     url:'/numbers/incoming',
     templateUrl:'modules/numbers-incoming.html',
     controller:'NumbersCtrl',
     parent:'restcomm'
   });
+  $stateProvider.state('restcomm.profile',{
+    url:'/profile',
+    templateUrl:'modules/profile.html',
+    controller:'ProfileCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.profile-account',{
+    url:'/profile/:accountSid',
+    templateUrl:'modules/profile.html',
+    controller:'ProfileCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.register-incoming',{
+    url:'/numbers/register-incoming',
+    templateUrl:'modules/numbers-incoming-register.html',
+    controller:'NumberRegisterCtrl',
+    parent:'restcomm',
+    resolve: {
+        $modalInstance : function() { return undefined; },
+        allCountries : function(RCommAvailableNumbers) { return RCommAvailableNumbers.getCountries().$promise; },
+        providerCountries: function(RCommAvailableNumbers, SessionService) { return RCommAvailableNumbers.getAvailableCountries({accountSid:SessionService.get("sid")}).$promise; }
+    }
+  });
+  $stateProvider.state('restcomm.incoming-phone',{
+    url:'/numbers/incoming/:phoneSid',
+    templateUrl:'modules/numbers-incoming-details.html',
+    controller:'NumberDetailsCtrl',
+    parent:'restcomm',
+    resolve: {
+        $modalInstance : function() {return undefined;},
+        allCountries : function() {return undefined;},
+        providerCountries : function() {return undefined;},
+        localApps: function (rappService) { return rappService.refreshLocalApps();}
+    }
+  });
+  $stateProvider.state('restcomm.clients',{
+    url:'/numbers/clients',
+    templateUrl: 'modules/numbers-clients.html',
+    controller: 'ClientsCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.client-details', {
+    url:'/numbers/clients/:clientSid',
+    templateUrl: 'modules/numbers-clients-details.html',
+    controller: 'ClientDetailsCtrl',
+    resolve: {
+        $modalInstance : function() {return undefined;},
+        localApps: function (rappService) { return rappService.refreshLocalApps();}
+    },
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.numbers-outgoing',{
+    url:'/numbers/outgoing',
+    templateUrl: 'modules/numbers-outgoing.html',
+    controller: 'OutgoingCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.numbers-shortcodes',{
+    url:'/numbers/shortcodes',
+    templateUrl: 'modules/numbers-shortcodes.html',
+    controller: 'MainCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.numbers-porting',{
+    url:'/numbers/porting',
+    templateUrl: 'modules/numbers-porting.html',
+    controller: 'MainCtrl',
+    parent:'restcomm'
+  });
+  $urlRouterProvider.when('/logs','/logs/calls');  // redirect /logs to /logs/calls
+  $stateProvider.state('restcomm.logs-calls',{
+    url:'/logs/calls',
+    templateUrl: 'modules/logs-calls.html',
+    controller: 'LogsCallsCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcom.logs-call-details', {
+    url:'/logs/calls/:callSid',
+    templateUrl: 'modules/logs-calls-details.html',
+    controller: 'LogsCallsDetailsCtrl',
+    resolve: {
+        $modalInstance : function() {return undefined;},
+        callSid: function() {}
+    },
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.logs-messages', {
+    url:'/logs/messages',
+    templateUrl: 'modules/logs-messages.html',
+    controller: 'LogsMessagesCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.logs-recordings',{
+    url:'/logs/recordings',
+    templateUrl: 'modules/logs-recordings.html',
+    controller: 'LogsRecordingsCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.logs-transcriptions',{
+    url:'/logs/transcriptions',
+    templateUrl: 'modules/logs-transcriptions.html',
+    controller: 'LogsTranscriptionsCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.logs-notifications',{
+    url:'/logs/notifications',
+    templateUrl: 'modules/logs-notifications.html',
+    controller: 'LogsNotificationsCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.usage',{
+    url:'/usage',
+    templateUrl: 'modules/usage.html',
+    controller: 'MainCtrl',
+    parent:'restcomm'
+  });
+  $stateProvider.state('restcomm.providers',{
+    url:'/providers',
+    templateUrl: 'modules/providers.html',
+    controller: 'MainCtrl',
+    parent:'restcomm'
+  });
+  $urlRouterProvider.otherwise('/dashboard');
 
 /*
   .

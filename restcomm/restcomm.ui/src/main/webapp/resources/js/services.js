@@ -65,13 +65,15 @@ rcServices.service('AuthService', function($http, $location, SessionService, md5
             //if(data.date_created && data.date_created == data.date_updated) {
             if(data.status) {
               if(data.status == 'uninitialized') {
-                cacheSession(data, true);
+                SessionService.set('sid')
+                //cacheSession(data, true);
               }
               else if(data.status == 'suspended') {
                 // no-op
               }
               else if (data.status == 'active') {
-                cacheSession(data, false);
+                //cacheSession(data, false);
+
               }
             }
           }
@@ -103,43 +105,82 @@ rcServices.service('AuthService', function($http, $location, SessionService, md5
       uncacheSession();
       // FIXME: return logout;
     },
-    updatePassword: function(credentials, newPassword) {
-      // TEMPORARY... FIXME!
-      var apiPath = $location.protocol() + "://" + credentials.sid.replace("@", "%40") + ":" + md5.createHash(credentials.token) + "@" + credentials.host + "/restcomm/2012-04-24/Accounts/" + this.getAccountSid() + ".json";
-      http://127.0.0.1:8080/restcomm/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf.json
-        var params = {};
-      params["Auth_Token"] = md5.createHash(newPassword);
-
-      var update = $http({method: 'PUT', url: apiPath, data: $.param(params), headers: {'Content-Type': 'application/x-www-form-urlencoded'}}).
-        success(function(data) {
-          passwordUpdated(params["Auth_Token"]);
-        }).
-        error(function(data) {
-          alert("Failed to update password. Please try again.");
-        }
-      );
-      return update;
-    },
-    isLoggedIn: function() {
-      return SessionService.get('authenticated');
-    },
-    getLoggedUser: function() {
-      return SessionService.get('logged_user');
-    },
+//    updatePassword: function(credentials, newPassword) {
+//      // TEMPORARY... FIXME!
+//      var apiPath = $location.protocol() + "://" + credentials.sid.replace("@", "%40") + ":" + md5.createHash(credentials.token) + "@" + credentials.host + "/restcomm/2012-04-24/Accounts/" + this.getAccountSid() + ".json";
+//      http://127.0.0.1:8080/restcomm/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf.json
+//        var params = {};
+//      params["Auth_Token"] = md5.createHash(newPassword);
+//
+//      var update = $http({method: 'PUT', url: apiPath, data: $.param(params), headers: {'Content-Type': 'application/x-www-form-urlencoded'}}).
+//        success(function(data) {
+//          passwordUpdated(params["Auth_Token"]);
+//        }).
+//        error(function(data) {
+//          alert("Failed to update password. Please try again.");
+//        }
+//      );
+//      return update;
+//    },
+//    isLoggedIn: function() {
+//      return SessionService.get('authenticated');
+//    },
+//    getLoggedUser: function() {
+//      return SessionService.get('logged_user');
+//    },
     getAccountSid: function() {
-      var sid = SessionService.get('sid')
-      return sid ? sid : SessionService.get('_sid');
+      return SessionService.get('sid');
+      //return sid ? sid : SessionService.get('_sid');
     },
-    getWaitingReset: function() {
-      return SessionService.get('_authenticated');
-    },
-    getEmailAddress: function() {
-      return SessionService.get('email_address');
-    },
-    getAuthToken: function() {
-        return SessionService.get('auth_token');
-    }    
+//    getWaitingReset: function() {
+//      return SessionService.get('_authenticated');
+//    },
+//    getEmailAddress: function() {
+//      return SessionService.get('email_address');
+//    },
+//    getAuthToken: function() {
+//        return SessionService.get('auth_token');
+//    }
   }
+});
+
+rcServices.factory('Identity',function(AuthService,RCommAccounts){
+    var account = null;
+
+    function getAccountSid() {
+        if (!!account)
+            return account.sid;
+        return null;
+    };
+    this.getAccountSid = getAccountSid;
+
+    function getAccount() {
+        return account;
+    };
+    this.getAccount = getAccount;
+
+    function checkAccess() {
+        if (!!getAccountSid())
+            deferred.resolve();
+        else {
+            var sid = AuthService.getAccountSid();
+            if (!!sid) {
+                RCommAccounts.get({accountSid:sid}, function (data) {
+                    setActiveAccount(data);
+                    deferred.resolve();
+                });
+            } else {
+                deferred.reject();
+            }
+        }
+    }
+
+    // updates all necessary state
+    function setActiveAccount(newAccount) {
+        account = newAccount;
+        SessionService.set('sid',newAccount.sid);
+    }
+
 });
 
 rcServices.factory('Notifications', function($rootScope, $timeout, $log) {
