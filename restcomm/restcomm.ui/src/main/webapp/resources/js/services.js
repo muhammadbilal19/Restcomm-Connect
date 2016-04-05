@@ -21,151 +21,35 @@ rcServices.factory('SessionService', function() {
   }
 });
 
-rcServices.service('AuthService', function($http, $location, SessionService, md5) {
-  var cacheSession = function(account, first) {
-    var prefix = first ? '_' : '';
-    SessionService.set('sid', account.sid);
-    SessionService.set(prefix + 'authenticated', true);
-    SessionService.set(prefix + 'logged_user', account.friendly_name);
-    SessionService.set(prefix + 'email_address', account.email_address);
-    SessionService.set(prefix + 'auth_token', account.auth_token);
-  };
-
-  var passwordUpdated = function(newAuthToken) {
-    SessionService.rename('_authenticated', 'authenticated');
-    SessionService.rename('_logged_user', 'logged_user');
-    SessionService.rename('_email_address', 'email_address');
-    SessionService.rename('_auth_token', 'auth_token');
-    SessionService.set('auth_token', newAuthToken);
-  };
-
-  var uncacheSession = function() {
-    SessionService.unset('sid');
-    SessionService.unset('authenticated');
-    SessionService.unset('logged_user');
-    SessionService.unset('email_address');
-    SessionService.unset('auth_token');
-    SessionService.unset('_sid');
-    SessionService.unset('_authenticated');
-    SessionService.unset('_logged_user');
-    SessionService.unset('_email_address');
-    SessionService.unset('_auth_token');
-  };
-
-
-  return {
-    login: function(credentials) {
-      // TEMPORARY... FIXME!
-      var apiPath = $location.protocol() + "://" + credentials.sid.replace("@", "%40") + ":" + md5.createHash(credentials.token) + "@" + credentials.host + "/restcomm/2012-04-24/Accounts" + ".json/" + credentials.sid ;
-
-
-      var login = $http.get(apiPath).
-        success(function(data, status, headers, config) {
-          if (status == 200) {
-            //if(data.date_created && data.date_created == data.date_updated) {
-            if(data.status) {
-              if(data.status == 'uninitialized') {
-                SessionService.set('sid')
-                //cacheSession(data, true);
-              }
-              else if(data.status == 'suspended') {
-                // no-op
-              }
-              else if (data.status == 'active') {
-                //cacheSession(data, false);
-
-              }
-            }
-          }
-          else {
-            uncacheSession();
-          }
-        }).
-        error(function(data) {
-          /*
-           if($scope.closeAlertTimer) {
-           clearTimeout($scope.closeAlertTimer);
-           }
-           $scope.alerts[0] = {type: 'error', msg: "Login failed! Please confirm your credentials."};
-           $scope.closeAlertTimer = setTimeout(function() {
-           // we need to wrap it in apply so that AngularJS knows about the change and updates components
-           $scope.$apply(function() {
-           $scope.closeAlertTimer = null;
-           $scope.alerts.splice(0, 1);
-           });
-           }, 3000);
-           */
-          alert("Login failed! Please confirm your credentials.");
-        }
-      );
-      return login;
-    },
-    logout: function() {
-      // TODO: Logout from restcomm ?
-      uncacheSession();
-      // FIXME: return logout;
-    },
-//    updatePassword: function(credentials, newPassword) {
-//      // TEMPORARY... FIXME!
-//      var apiPath = $location.protocol() + "://" + credentials.sid.replace("@", "%40") + ":" + md5.createHash(credentials.token) + "@" + credentials.host + "/restcomm/2012-04-24/Accounts/" + this.getAccountSid() + ".json";
-//      http://127.0.0.1:8080/restcomm/2012-04-24/Accounts/ACae6e420f425248d6a26948c17a9e2acf.json
-//        var params = {};
-//      params["Auth_Token"] = md5.createHash(newPassword);
-//
-//      var update = $http({method: 'PUT', url: apiPath, data: $.param(params), headers: {'Content-Type': 'application/x-www-form-urlencoded'}}).
-//        success(function(data) {
-//          passwordUpdated(params["Auth_Token"]);
-//        }).
-//        error(function(data) {
-//          alert("Failed to update password. Please try again.");
-//        }
-//      );
-//      return update;
-//    },
-//    isLoggedIn: function() {
-//      return SessionService.get('authenticated');
-//    },
-//    getLoggedUser: function() {
-//      return SessionService.get('logged_user');
-//    },
-    getAccountSid: function() {
-      return SessionService.get('sid');
-      //return sid ? sid : SessionService.get('_sid');
-    },
-//    getWaitingReset: function() {
-//      return SessionService.get('_authenticated');
-//    },
-//    getEmailAddress: function() {
-//      return SessionService.get('email_address');
-//    },
-//    getAuthToken: function() {
-//        return SessionService.get('auth_token');
-//    }
-  }
-});
-
-rcServices.factory('Identity',function(AuthService,RCommAccounts){
+rcServices.factory('AuthService',function(RCommAccounts,$http, $location, SessionService, md5, Notifications, $q){
     var account = null;
+    var uninitialized = null;
 
     function getAccountSid() {
         if (!!account)
             return account.sid;
         return null;
     };
-    this.getAccountSid = getAccountSid;
 
     function getAccount() {
         return account;
     };
-    this.getAccount = getAccount;
+
+    // returns Friendly Name for the logged account. Override this in SSO to also cover users with no account mapped
+    function getFriendlyName() {
+        if (!!account)
+            return account.friendly_name;
+        return "";
+    }
 
     function checkAccess() {
+        var deferred = $q.defer();
         if (!!getAccountSid())
             deferred.resolve();
         else {
-            var sid = AuthService.getAccountSid();
+            var sid = SessionService.get('sid');
             if (!!sid) {
-                RCommAccounts.get({accountSid:sid}, function (data) {
+                RCommAccounts.view({accountSid:sid}, function (data) {
                     setActiveAccount(data);
                     deferred.resolve();
                 });
@@ -173,14 +57,87 @@ rcServices.factory('Identity',function(AuthService,RCommAccounts){
                 deferred.reject();
             }
         }
+        return deferred.promise;
     }
 
     // updates all necessary state
     function setActiveAccount(newAccount) {
         account = newAccount;
         SessionService.set('sid',newAccount.sid);
+        if (account && account.status == 'uninitialized')
+            uninitialized = true;
+        else
+            uninitialized = false;
     }
 
+    function clearActiveAccount() {
+        SessionService.unset('sid');
+        account = null;
+        uninitialized = null;
+    }
+
+    function isUninitialized() {
+        return uninitialized;
+    }
+
+    // Returns a promise.
+    //  - resolved: OK, UNINITIALIZED
+    //  - rejected: SUSPENDED, UNKNOWN_ERROR, AUTH_ERROR
+    function login(credentials) {
+      var deferred = $q.defer();
+      // TEMPORARY... FIXME!
+      var apiPath = $location.protocol() + "://" + credentials.sid.replace("@", "%40") + ":" + md5.createHash(credentials.token) + "@" + credentials.host + "/restcomm/2012-04-24/Accounts" + ".json/" + credentials.sid ;
+      var login = $http.get(apiPath).
+        success(function(data, status, headers, config) {
+          if (status == 200) {
+            //if(data.date_created && data.date_created == data.date_updated) {
+            if(data.status) {
+              if(data.status == 'uninitialized') {
+                setActiveAccount(data);
+                deferred.resolve("UNINITIALIZED");
+                return;
+              }
+              else if(data.status == 'suspended') {
+                clearActiveAccount();
+                deferred.reject('SUSPENDED');
+                return;
+              }
+              else if (data.status == 'active') {
+                setActiveAccount(data);
+                deferred.resolve('OK');
+                return;
+              }
+            }
+          }
+          // some sort of unknown error occured
+          clearActiveAccount();
+          deferred.reject('UNKNOWN_ERROR');
+          return;
+        }).
+        error(function(data) {
+          Notifications.error("Login failed! Please confirm your credentials.");
+          clearActiveAccount();
+          deferred.reject('AUTH_ERROR');
+          return;
+        });
+      return deferred.promise;
+    }
+
+    function logout() {
+          SessionService.unset('sid');
+          account = null;
+    }
+
+    // public interface
+    return {
+        login: login,
+        logout: logout,
+        getAccountSid: getAccountSid,
+        getAccount: getAccount,
+        getFrientlyName: getFriendlyName,
+        checkAccess: checkAccess,
+        isUninitialized: isUninitialized
+    }
 });
 
 rcServices.factory('Notifications', function($rootScope, $timeout, $log) {

@@ -33,8 +33,11 @@ rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $u
   });
   $stateProvider.state('restcomm',{
     templateUrl:'templates/restcomm-state.html',
+    controller:'RestcommCtrl',
     resolve: {
-        authorize: function (Identity) {return Identity.checkAccess();}
+        authorize: function (AuthService) {
+            return AuthService.checkAccess();
+        }
     }
   });
   $stateProvider.state('restcomm.dashboard',{
@@ -243,9 +246,9 @@ rcMod.directive('equals', function() {
 rcMod.run(function($rootScope, $location, $anchorScroll, AuthService) {
   $rootScope.$on("$routeChangeStart", function(event, next, current) {
     $anchorScroll(); // scroll to top
-    if(!AuthService.isLoggedIn()) {
-      $location.path("/login");
-    }
+    //if(!AuthService.isLoggedIn()) {
+    //  $location.path("/login");
+    //}
   })
 });
 
