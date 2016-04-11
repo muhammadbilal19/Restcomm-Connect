@@ -273,17 +273,22 @@ angular
   });
 */
 
-// Ideally we would use AuthService instead of SessionService dep here to retrieve email and token, but it causes a circular dependency issue. So we go right to the source - SessionService 
+// There is a circular dependency issue when directly injecting AuthService in the function. A workaround using $injector has
+// been used - http://stackoverflow.com/questions/20647483/angularjs-injecting-service-into-a-http-interceptor-circular-dependency
 rcMod.
-  factory('authHttpResponseInterceptor',['$q','$location','SessionService',function($q,$location,SessionService){
+  factory('authHttpResponseInterceptor',['$q','$location','$injector',function($q,$location,$injector){
     return {
       request: function(config) {
     	  var rvd_prefix = "/restcomm-rvd/";
     	  if ( config.url.substring(0, rvd_prefix.length) === rvd_prefix ) {
     		  //console.log("Adding auth headers to RVD request - " + config.url);
-		      var auth_header = SessionService.get("email_address") + ":" + SessionService.get("auth_token");
-		      auth_header = "Basic " + btoa(auth_header);
-		      config.headers.authorization = auth_header;
+    		  var AuthService = $injector.get('AuthService');
+    		  var account = AuthService.getAccount();
+    		  if (!!account) {
+                  var auth_header = account.email_address + ":" + account.auth_token;
+                  auth_header = "Basic " + btoa(auth_header);
+                  config.headers.authorization = auth_header;
+		      }
     	  }
 	      return config;
 	    },

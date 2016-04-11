@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('rcApp').controller('EventsCtrl', function ($rootScope, rappService) {
+angular.module('rcApp').controller('EventsCtrl', function ($rootScope, rappService, $state) {
 	//console.log("INSIDE EventsCtrl");
 	$rootScope.$on("incoming-number-updated", function (event, data) {
         //console.log("new incoming-number-updated event with the following data: ");
@@ -23,7 +23,15 @@ angular.module('rcApp').controller('EventsCtrl', function ($rootScope, rappServi
 	});
 
 	$rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState, fromParams, options){
-	    console.log("switching states: " + fromState + " -> " + toState);
+	    console.log("switching states: " + fromState.name + " -> " + toState.name);
+	});
+
+	$rootScope.$on('$stateChangeError',  function(event, toState, toParams, fromState, fromParams, error){
+	    console.log("stateChangeError");
+	    // see AuthService.checkAccess() for error definitions
+	    if (error == "MISSING_ACCOUNT_SID")
+	        $state.go("public.login");
+
 	});
 });
 

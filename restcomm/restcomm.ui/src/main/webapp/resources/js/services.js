@@ -42,9 +42,12 @@ rcServices.factory('AuthService',function(RCommAccounts,$http, $location, Sessio
         return "";
     }
 
+    // Returns a promise:
+    //  - rejected: MISSING_ACCOUNT_SID
+    //  - resolved:
     function checkAccess() {
         var deferred = $q.defer();
-        if (!!getAccountSid())
+        if (!!getAccountSid()) // get account sid from js application (not from session storage) - if F5 is pressed this is lost
             deferred.resolve();
         else {
             var sid = SessionService.get('sid');
@@ -54,7 +57,7 @@ rcServices.factory('AuthService',function(RCommAccounts,$http, $location, Sessio
                     deferred.resolve();
                 });
             } else {
-                deferred.reject();
+                deferred.reject("MISSING_ACCOUNT_SID");
             }
         }
         return deferred.promise;

@@ -7,7 +7,8 @@ angular.module("rcApp.restcommApps", ['ui.router']).config([ '$stateProvider',  
         resolve: {
             products: rappManagerCtrl.getProducts,
             localApps: function (rappService) { return rappService.refreshLocalApps();}
-        }
+        },
+        parent:'restcomm'
 	});
 	$stateProvider.state('restcomm.ras-config',{
 	    url:'/ras/config/:applicationSid=:projectName/:mode?',
@@ -17,7 +18,8 @@ angular.module("rcApp.restcommApps", ['ui.router']).config([ '$stateProvider',  
 			rappConfig : function (rappService, $route) { return rappService.getAppConfig($route.current.params.applicationSid);}, //, $route.current.params.mode); },
 			rapp: function (rappService, $route) {return rappService.getApp($route.current.params.applicationSid);},
 			bootstrapObject : function (rappService, $route) { return rappService.getBoostrapObject($route.current.params.applicationSid); }
-		}
+		},
+		parent:'restcomm'
 	});
 
 	/*
