@@ -18,6 +18,7 @@ var rcMod = angular.module('rcApp', [
   'ui.router'
 ]);
 
+// For all states that that have resolve sections that rely on a determined authorization status (AuthService.checkAccess()) and are children of 'restcomm' state, the 'authorize' value should be injected in the dependent 'resolve' values. See state 'restcomm.incoming-phone / localApps'.
 rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $urlRouterProvider) {
   $stateProvider.state('public',{
     templateUrl:'templates/public-state.html'
@@ -25,8 +26,7 @@ rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $u
   $stateProvider.state('public.login',{
     url:"/login",
     templateUrl:'modules/login.html',
-    controller:'LoginCtrl',
-    parent:'public'
+    controller:'LoginCtrl'
   });
   $stateProvider.state('public.registerinstance',{
     parent:'public'
@@ -43,56 +43,49 @@ rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $u
   $stateProvider.state('restcomm.dashboard',{
     url:'/dashboard',
     templateUrl:'modules/dashboard.html',
-    controller: 'DashboardCtrl',
-    parent:'restcomm'
+    controller: 'DashboardCtrl'
   });
   $urlRouterProvider.when('/numbers','/numbers/incoming'); //redirect to numbers/incoming
   $stateProvider.state('restcomm.numbers-incoming',{
     url:'/numbers/incoming',
     templateUrl:'modules/numbers-incoming.html',
-    controller:'NumbersCtrl',
-    parent:'restcomm'
+    controller:'NumbersCtrl'
   });
   $stateProvider.state('restcomm.profile',{
     url:'/profile',
     templateUrl:'modules/profile.html',
-    controller:'ProfileCtrl',
-    parent:'restcomm'
+    controller:'ProfileCtrl'
   });
   $stateProvider.state('restcomm.profile-account',{
     url:'/profile/:accountSid',
     templateUrl:'modules/profile.html',
-    controller:'ProfileCtrl',
-    parent:'restcomm'
+    controller:'ProfileCtrl'
   });
   $stateProvider.state('restcomm.register-incoming',{
     url:'/numbers/register-incoming',
     templateUrl:'modules/numbers-incoming-register.html',
     controller:'NumberRegisterCtrl',
-    parent:'restcomm',
     resolve: {
         $modalInstance : function() { return undefined; },
         allCountries : function(RCommAvailableNumbers) { return RCommAvailableNumbers.getCountries().$promise; },
-        providerCountries: function(RCommAvailableNumbers, SessionService) { return RCommAvailableNumbers.getAvailableCountries({accountSid:SessionService.get("sid")}).$promise; }
+        providerCountries: function(RCommAvailableNumbers, AuthService, authorize) { return RCommAvailableNumbers.getAvailableCountries({accountSid:AuthService.getAccountSid()}).$promise; }
     }
   });
   $stateProvider.state('restcomm.incoming-phone',{
     url:'/numbers/incoming/:phoneSid',
     templateUrl:'modules/numbers-incoming-details.html',
     controller:'NumberDetailsCtrl',
-    parent:'restcomm',
     resolve: {
         $modalInstance : function() {return undefined;},
         allCountries : function() {return undefined;},
         providerCountries : function() {return undefined;},
-        localApps: function (rappService) { return rappService.refreshLocalApps();}
+        localApps: function (rappService, authorize) { return rappService.refreshLocalApps();}
     }
   });
   $stateProvider.state('restcomm.clients',{
     url:'/numbers/clients',
     templateUrl: 'modules/numbers-clients.html',
-    controller: 'ClientsCtrl',
-    parent:'restcomm'
+    controller: 'ClientsCtrl'
   });
   $stateProvider.state('restcomm.client-details', {
     url:'/numbers/clients/:clientSid',
@@ -100,34 +93,29 @@ rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $u
     controller: 'ClientDetailsCtrl',
     resolve: {
         $modalInstance : function() {return undefined;},
-        localApps: function (rappService) { return rappService.refreshLocalApps();}
-    },
-    parent:'restcomm'
+        localApps: function (rappService,authorize) { return rappService.refreshLocalApps();}
+    }
   });
   $stateProvider.state('restcomm.numbers-outgoing',{
     url:'/numbers/outgoing',
     templateUrl: 'modules/numbers-outgoing.html',
-    controller: 'OutgoingCtrl',
-    parent:'restcomm'
+    controller: 'OutgoingCtrl'
   });
   $stateProvider.state('restcomm.numbers-shortcodes',{
     url:'/numbers/shortcodes',
     templateUrl: 'modules/numbers-shortcodes.html',
-    controller: 'MainCtrl',
-    parent:'restcomm'
+    controller: 'MainCtrl'
   });
   $stateProvider.state('restcomm.numbers-porting',{
     url:'/numbers/porting',
     templateUrl: 'modules/numbers-porting.html',
-    controller: 'MainCtrl',
-    parent:'restcomm'
+    controller: 'MainCtrl'
   });
   $urlRouterProvider.when('/logs','/logs/calls');  // redirect /logs to /logs/calls
   $stateProvider.state('restcomm.logs-calls',{
     url:'/logs/calls',
     templateUrl: 'modules/logs-calls.html',
-    controller: 'LogsCallsCtrl',
-    parent:'restcomm'
+    controller: 'LogsCallsCtrl'
   });
   $stateProvider.state('restcom.logs-call-details', {
     url:'/logs/calls/:callSid',
@@ -136,44 +124,37 @@ rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $u
     resolve: {
         $modalInstance : function() {return undefined;},
         callSid: function() {}
-    },
-    parent:'restcomm'
+    }
   });
   $stateProvider.state('restcomm.logs-messages', {
     url:'/logs/messages',
     templateUrl: 'modules/logs-messages.html',
-    controller: 'LogsMessagesCtrl',
-    parent:'restcomm'
+    controller: 'LogsMessagesCtrl'
   });
   $stateProvider.state('restcomm.logs-recordings',{
     url:'/logs/recordings',
     templateUrl: 'modules/logs-recordings.html',
-    controller: 'LogsRecordingsCtrl',
-    parent:'restcomm'
+    controller: 'LogsRecordingsCtrl'
   });
   $stateProvider.state('restcomm.logs-transcriptions',{
     url:'/logs/transcriptions',
     templateUrl: 'modules/logs-transcriptions.html',
-    controller: 'LogsTranscriptionsCtrl',
-    parent:'restcomm'
+    controller: 'LogsTranscriptionsCtrl'
   });
   $stateProvider.state('restcomm.logs-notifications',{
     url:'/logs/notifications',
     templateUrl: 'modules/logs-notifications.html',
-    controller: 'LogsNotificationsCtrl',
-    parent:'restcomm'
+    controller: 'LogsNotificationsCtrl'
   });
   $stateProvider.state('restcomm.usage',{
     url:'/usage',
     templateUrl: 'modules/usage.html',
-    controller: 'MainCtrl',
-    parent:'restcomm'
+    controller: 'MainCtrl'
   });
   $stateProvider.state('restcomm.providers',{
     url:'/providers',
     templateUrl: 'modules/providers.html',
-    controller: 'MainCtrl',
-    parent:'restcomm'
+    controller: 'MainCtrl'
   });
   $urlRouterProvider.otherwise('/dashboard');
 

@@ -5,7 +5,7 @@
         </div>
         <i class="fa fa-info-circle pull-right text-danger clickable" style="padding-top: 12px;" ng-click="showAboutModal()"></i>
         <div class="navbar-collapse collapse">
-            <div ng-show="!!loggedAccount" ng-controller="UserMenuCtrl">
+            <div ng-if="!!loggedAccount" ng-controller="UserMenuCtrl">
                 <ul class="nav navbar-nav">
                     <li><a> </a></li>
                     <li><a ng-href="#/dashboard"><i class="fa fa-dashboard"></i> Dashboard</a></li>

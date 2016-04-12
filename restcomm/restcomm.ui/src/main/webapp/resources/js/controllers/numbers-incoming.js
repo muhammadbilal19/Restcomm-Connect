@@ -108,7 +108,7 @@ var NumberDetailsCtrl = function ($scope, $stateParams, $location, $dialog, $mod
       function() { // success
         Notifications.success('Number "' + number.phone_number + '" updated successfully!');
         $rootScope.$broadcast("incoming-number-updated", {phoneSid:$scope.phoneSid, params: params});
-        $location.path( "/numbers/incoming/" );
+        $location.path( "/numbers/incoming" );
       },
       function() { // error
         Notifications.error('Failed to update number "' + number.phone_number + '".');
@@ -221,7 +221,7 @@ var confirmNumberDelete = function(phone, $dialog, $scope, RCommNumbers, Notific
           function() {
             Notifications.success('The incoming number "' + phone.phone_number + '" has been deleted.');
             if($location) {
-              $location.path( "/numbers/incoming/" );
+              $location.path( "/numbers/incoming" );
             }
             else {
               $scope.numbersList = RCommNumbers.query({accountSid:$scope.sid});
