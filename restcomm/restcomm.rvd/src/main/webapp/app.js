@@ -11,11 +11,73 @@ var App = angular.module('Rvd', [
 	'ngSanitize',
 	'ngResource',
 	'ngCookies',
-	'ngIdle'
+	'ngIdle',
+	'ui.router'
 ]);
 
 var rvdMod = App;
 
+App.config(['$stateProvider','$urlRouterProvider', '$translateProvider', function ($stateProvider,$urlRouterProvider,$translateProvider) {
+    $stateProvider.state('root',{
+        resolve:{
+            init: function (initializer) {
+                console.log('Initializing RVD');
+                return initializer.init();
+            }
+        }
+    });
+    $stateProvider.state('root.public',{});
+    $stateProvider.state('root.public.login',{
+        url:"/login",
+        views: {
+            'container@': {
+                templateUrl: 'templates/login.html',
+                controller: 'loginCtrl'
+            }
+        }
+    });
+    $stateProvider.state('root.rvd',{
+        views: {
+            'authmenu@': {
+                templateUrl: 'templates/index-authmenu.html',
+                controller: 'authMenuCtrl'
+            }
+        },
+        resolve: {
+            authorize: function (init, authentication) { // block on init ;-)
+                authentication.checkRvdAccess(); // pass required role here
+            }
+        }
+    });
+    $stateProvider.state('root.rvd.home',{
+        url:"/home",
+        views: {
+            'container@': {
+                templateUrl: 'templates/home.html'
+            }
+        }
+    });
+    /*
+    $stateProvider.state('root.rvd.projectManager',{
+        views: {
+            'container@': {
+                templateUrl: 'templates/projectManager.html',
+                controller: 'projectManagerCtrl'
+            }
+        }
+    });
+    */
+    //$stateProvider.state('root.rvd.designer',{});
+
+    $translateProvider.useStaticFilesLoader({
+        prefix: '/restcomm-rvd/languages/',
+        suffix: '.json'
+    });
+    $translateProvider.useCookieStorage();
+    $translateProvider.preferredLanguage('en-US');
+}]);
+
+/*
 App.config([ '$routeProvider', '$translateProvider', function($routeProvider, $translateProvider) {
 
 	$routeProvider.when('/project-manager/:projectKind', {
@@ -78,14 +140,8 @@ App.config([ '$routeProvider', '$translateProvider', function($routeProvider, $t
 		redirectTo : '/home'
 	});
 
-	$translateProvider.useStaticFilesLoader({
-  		prefix: '/restcomm-rvd/languages/',
-  		suffix: '.json'
-	});
-	$translateProvider.useCookieStorage();
-	$translateProvider.preferredLanguage('en-US');
-
 }]);
+*/
 
 App.config(function(IdleProvider, KeepaliveProvider, TitleProvider) {
     // configure Idle settings

@@ -1,4 +1,4 @@
-App.controller('AppCtrl', function ($rootScope, $location, $scope, Idle, keepAliveResource, authentication, notifications) {
+App.controller('AppCtrl', function ($rootScope, $location, $scope, Idle, keepAliveResource, authentication, notifications, $state) {
 	$rootScope.$on("$routeChangeError", function(event, current, previous, rejection) {
         //console.log('on $routeChangeError');
         if ( rejection == "AUTHENTICATION_ERROR" ) {
@@ -16,6 +16,17 @@ App.controller('AppCtrl', function ($rootScope, $location, $scope, Idle, keepAli
 
     $rootScope.$on('$routeChangeStart', function(){
     	$rootScope.rvdError = undefined;
+	});
+
+	$rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState, fromParams, options){
+	    console.log("switching states: " + fromState.name + " -> " + toState.name);
+	});
+
+	$rootScope.$on('$stateChangeError',  function(event, toState, toParams, fromState, fromParams, error){
+	    console.log("error switching states");
+	    // see AuthService.checkAccess() for error definitions
+	    if (error == "NEED_LOGIN")
+	        $state.go('root.public.login');
 	});
 
 	// --- ngIdle configuration
@@ -78,14 +89,10 @@ var loginCtrl = angular.module('Rvd')
 	}
 }]);
 
-
-App.controller('homeCtrl', function ($scope, authInfo) {
-});
-
-angular.module('Rvd').controller('projectLogCtrl', ['$scope', '$routeParams', 'projectLogService', 'notifications', function ($scope, $routeParams, projectLogService, notifications) {
+angular.module('Rvd').controller('projectLogCtrl', ['$scope', '$stateParams', 'projectLogService', 'notifications', function ($scope, $stateParams, projectLogService, notifications) {
 	//console.log('in projectLogCtrl');
-	$scope.projectName = $routeParams.projectName;
-	$scope.applicationSid = $routeParams.applicationSid;
+	$scope.projectName = $stateParams.projectName;
+	$scope.applicationSid = $stateParams.applicationSid;
 	$scope.logData = '';
 
 	function retrieveLog() {
@@ -111,7 +118,7 @@ angular.module('Rvd').controller('projectLogCtrl', ['$scope', '$routeParams', 'p
 	retrieveLog($scope.applicationSid);
 }]);
 
-App.controller('mainMenuCtrl', ['$scope', 'authentication', '$location', '$modal','$q', '$http', function ($scope, authentication, $location, $modal, $q, $http) {
+App.controller('authMenuCtrl', ['$scope', 'authentication', '$location', '$modal','$q', '$http', function ($scope, authentication, $location, $modal, $q, $http) {
 	$scope.authInfo = authentication.getAuthInfo();
 	//$scope.username = authentication.getTicket(); //"Testuser@test.com";
 

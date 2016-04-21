@@ -56,9 +56,24 @@ angular.module('Rvd').service('projectModules', [function () {
 }]);
 */
 
+angular.module('Rvd').service('initializer',function (authentication, $q) {
+    return {
+        // Checks login status and account availability and resolves a promise when done. It always resolves. The idea is to wait for it and make decisions afterwards.
+        init: function () {
+            var initPromise = $q.defer();
+            if (authentication.looksAuthenticated()) {
+                // here we could try retrieving further user information
+                // ...
+                initPromise.resolve();
+            } else {
+                initPromise.resolve();
+            }
+            return initPromise.promise;
+        }
+    };
+});
+
 angular.module('Rvd').service('authentication', ['$http', '$cookies', '$q', '$location', 'Idle', function ($http, $cookies, $q, $location, Idle) {
-	//console.log("Creating authentication service");
-	var serviceInstance = {};
 	var authInfo = {};
 	
 	function refresh() {
@@ -85,7 +100,6 @@ angular.module('Rvd').service('authentication', ['$http', '$cookies', '$q', '$lo
 		});
 		return deferred.promise;
 	}
-	serviceInstance.doLogin = doLogin;
 	
 	function doLogout() {
 		var deferred = $q.defer();
@@ -103,28 +117,38 @@ angular.module('Rvd').service('authentication', ['$http', '$cookies', '$q', '$lo
 		});		
 		return deferred.promise;
 	}
-	serviceInstance.doLogout = doLogout;
 	
-	serviceInstance.getAuthInfo = function () {
+	function getAuthInfo () {
 		return authInfo;
 	}
+
+	function isLoggedIn() {
+        if (getUsername)
+            return true;
+        return false;
+	}
+
+	function getUsername() {
+	    if (authInfo && authInfo.username)
+	        return authInfo.username;
+	    else
+	        return null;
+	}
 	
-	serviceInstance.clearTicket = function () {
+	function clearTicket () {
 		$cookies.remove("rvdticket");
 		authInfo.rvdticket = undefined;
 		authInfo.username = undefined;
 	}
 	
-	serviceInstance.looksAuthenticated = function () {
+	function looksAuthenticated () {
 		refresh();
 		if ( !authInfo.rvdticket )
 			return false;
 		return true;
 	}
 	
-	
-	
-	serviceInstance.authResolver = function() {
+	function authResolver() {
 		var deferred = $q.defer();
 		if ( !this.looksAuthenticated() ) {
 			deferred.reject("AUTHENTICATION_ERROR");
@@ -133,10 +157,33 @@ angular.module('Rvd').service('authentication', ['$http', '$cookies', '$q', '$lo
 		}
 		return deferred.promise;
 	}
-	
-	return serviceInstance;
-	
-	
+
+	// checks that typical access to RVD services is allowed. A required role can be passed too
+	function checkRvdAccess(role) {
+	    // TODO implement role checking
+	    // ...
+	    var deferred = $q.defer();
+	    if (isLoggedIn()) {
+	        deferred.resolve();
+	    } else {
+	        deferred.reject('NEED_LOGIN');
+	    }
+	    return deferred.promise;
+	}
+
+    // public interface
+
+    return {
+        getUsername: getUsername,
+        isLoggedIn: isLoggedIn,
+        doLogin: doLogin,
+        authResolver:  authResolver,
+        looksAuthenticated: looksAuthenticated,
+        clearTicket: clearTicket,
+        getAuthInfo: getAuthInfo,
+        doLogout: doLogout,
+        checkRvdAccess: checkRvdAccess
+	}
 }]);
 
 angular.module('Rvd').service('projectSettingsService', ['$http','$q','$modal', '$resource', function ($http,$q,$modal,$resource) {
@@ -352,11 +399,11 @@ angular.module('Rvd').service('webTriggerService', ['$http','$q','$modal', funct
 }]);
 
 
-angular.module('Rvd').service('projectLogService', ['$http','$q','$routeParams', 'notifications', function ($http,$q,$routeParams,notifications) {
+angular.module('Rvd').service('projectLogService', ['$http','$q','$stateParams', 'notifications', function ($http,$q,$stateParams,notifications) {
 	var service = {};
 	service.retrieve = function () {
 		var deferred = $q.defer();
-		$http({method:'GET', url:'services/apps/'+$routeParams.applicationSid+'/log'})
+		$http({method:'GET', url:'services/apps/'+$stateParams.applicationSid+'/log'})
 		.success(function (data,status) {
 			console.log('retrieved log data');
 			deferred.resolve(data);
@@ -368,14 +415,14 @@ angular.module('Rvd').service('projectLogService', ['$http','$q','$routeParams',
 	}
 	service.reset = function () {
 		var deferred = $q.defer();
-		$http({method:'DELETE', url:'services/apps/'+$routeParams.applicationSid+'/log'})
+		$http({method:'DELETE', url:'services/apps/'+$stateParams.applicationSid+'/log'})
 		.success(function (data,status) {
 			console.log('reset log data');
-			notifications.put({type:'success',message:$routeParams.projectName+' log reset'});
+			notifications.put({type:'success',message:$stateParams.projectName+' log reset'});
 			deferred.resolve();
 		})
 		.error(function (data,status) {
-			//notifications.put({type:'danger',message:'Cannot reset '+$routeParams.projectName+' log'});
+			//notifications.put({type:'danger',message:'Cannot reset '+$stateParams.projectName+' log'});
 			deferred.reject();
 		});
 		return deferred.promise;		
