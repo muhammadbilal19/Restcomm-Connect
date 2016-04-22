@@ -39,10 +39,11 @@ import javax.ws.rs.core.SecurityContext;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.mobicents.servlet.restcomm.rvd.RvdConfiguration;
-import org.mobicents.servlet.restcomm.rvd.exceptions.UnauthorizedException;
+import org.mobicents.servlet.restcomm.rvd.http.RestService;
 import org.mobicents.servlet.restcomm.rvd.model.ModelMarshaler;
 import org.mobicents.servlet.restcomm.rvd.model.UserProfile;
 import org.mobicents.servlet.restcomm.rvd.model.client.SettingsModel;
+import org.mobicents.servlet.restcomm.rvd.security.annotations.RvdAuth;
 import org.mobicents.servlet.restcomm.rvd.storage.FsProfileDao;
 import org.mobicents.servlet.restcomm.rvd.storage.ProfileDao;
 import org.mobicents.servlet.restcomm.rvd.storage.WorkspaceStorage;
@@ -57,7 +58,7 @@ import com.google.gson.JsonSyntaxException;
  */
 // TODO rename this to 'profile' as well as method names
 @Path("settings")
-public class SettingsRestService extends SecuredRestService {
+public class SettingsRestService extends RestService {
     static final Logger logger = Logger.getLogger(RasRestService.class.getName());
 
     @Context
@@ -75,9 +76,9 @@ public class SettingsRestService extends SecuredRestService {
         workspaceStorage = new WorkspaceStorage(settings.getWorkspaceBasePath(), marshaler);
     }
 
+    @RvdAuth
     @POST
-    public Response setProfile(@Context HttpServletRequest request) throws UnauthorizedException {
-        secure("Developer");
+    public Response setProfile(@Context HttpServletRequest request) {
         try {
             // Create a settings model from the request
             String data;
@@ -102,10 +103,10 @@ public class SettingsRestService extends SecuredRestService {
         }
     }
 
+    @RvdAuth
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getProfile() throws UnauthorizedException {
-        secure("Developer");
+    public Response getProfile() {
         // load user profile
         ProfileDao profileDao = new FsProfileDao(workspaceStorage);
         String loggedUsername = securityContext.getUserPrincipal().getName();

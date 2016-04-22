@@ -7,6 +7,9 @@ public class RestcommConfig {
     SslMode sslMode;
     String hostname;
     boolean useHostnameToResolveRelativeUrl;
+    String authServerUrl; // keycloak url e.g. http://my.keycloak:8080/auth. THIS IS A FLAG
+    String realmPublicKey;
+    String realm; // keycloak realm to use for auth.
 
     public RestcommConfig() {
         super();

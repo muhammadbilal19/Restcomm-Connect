@@ -6,15 +6,25 @@ angular.module('Rvd')
 	
 	notifications.put = function (notif) {
 		notifications.data.push(notif);
-		
-		$timeout(function () { 
-			if (notifications.data.indexOf(notif) != -1)
-				notifications.data.splice(notifications.data.indexOf(notif),1); 
-		}, 3000);
+
+		var timeout = 3000;
+		if (typeof notif.timeout !== "undefined" )
+		    timeout = notif.timeout;
+
+        if (timeout > 0) {
+            $timeout(function () {
+                if (notifications.data.indexOf(notif) != -1)
+                    notifications.data.splice(notifications.data.indexOf(notif),1);
+            }, timeout);
+		}
 	}
 	
 	notifications.remove = function (removedIndex) {
 		notifications.data.splice(removedIndex, 1);
+	}
+
+	notifications.clear = function () {
+	    notifications.data = [];
 	}
 	
 	return notifications;
@@ -46,57 +56,130 @@ angular.module('Rvd').service('projectModules', [function () {
 }]);
 */
 
-// RVD authc/authz wrapper. Try to use this instead of keycloakAuth service directly.
-angular.module('Rvd').service('auth', function(keycloakAuth,$q,notifications) {
-		var service = {};
-		service.getLoggedUsername = function() {
-			//return keycloakAuth.getUsername();
-			if (keycloakAuth.authz.profile) {
-				var profile = keycloakAuth.authz.profile;
-				return profile.username;
-			} else
-				return "Unknown";
-		}
-		service.isLogged = function() {
-			return keycloakAuth.loggedIn;
-		}
-		service.getLogoutUrl = function() {
-			return keycloakAuth.logoutUrl;
-		}
-		service.logout = function() {
-			keycloakAuth.authz.logout();
-		}
-		
-		service.secureAny = function(roles) {
-			var deferred = $q.defer();
-			for (var i=0; i<roles.length; i++) {
-				if ( keycloakAuth.authz.hasResourceRole(roles[i], keycloakAuth.authz.clientId ) ) {
-					deferred.resolve();
-					return deferred.promise;
-				}
-			}
-			deferred.reject();
-			notifications.put({type:"danger",message:"You are not authorized to access this resource"});
-			return deferred.promise;
-		}
-		service.secureAll = function(roles) {
-			var deferred = $q.defer();
-			for (var i=0; i<roles.length; i++) {
-				if ( ! keycloakAuth.authz.hasResourceRole(roles[i], keycloakAuth.authz.clientId) ) {
-					deferred.reject();
-					notifications.put({type:"danger",message:"You are not authorized to access this resource"});
-					return deferred.promise;
-				}
-			}
+angular.module('Rvd').service('initializer',function (authentication, $q) {
+    return {
+        // Checks login status and account availability and resolves a promise when done. It always resolves. The idea is to wait for it and make decisions afterwards.
+        init: function () {
+            var initPromise = $q.defer();
+            authentication.refresh().then(function () {
+                initPromise.resolve();
+                // here we could try retrieving further user information
+            }, function () {
+                initPromise.resolve()
+            });
+            return initPromise.promise;
+        }
+    };
+});
+
+angular.module('Rvd').service('authentication', function ($http, $cookies, $q, $location, Idle, keepAliveResource) {
+	var authInfo = {};
+	
+	function refresh() {
+	    // make an actual request to see if we're logged in
+	    return keepAliveResource.get({}, function (response) {
+	        // success
+            readTicket();
+	    }, function (response) {
+	        // error
+            clearTicket();
+	    }).$promise;
+	    // a promise is returned
+	}
+	
+	function doLogin(username, password) {
+		var deferred = $q.defer();
+		$http({	url:'services/auth/login', method:'POST', data:{ username: username, password: password}})
+		.success ( function () {
+			console.log("login successful");
+			readTicket();
 			deferred.resolve();
-			return deferred.promise;
-		}
-		service.secure = function(role) {
-				return service.secureAny([role]);
-		}
-		
-		
-		return service;
+			Idle.watch(); // start watching for idleness if not already doing it
+		})
+		.error( function (data, status) {
+		    clearTicket();
+			console.log("error logging in");
+			deferred.reject(data);
+		});
+		return deferred.promise;
+	}
+	
+	function doLogout() {
+		var deferred = $q.defer();
+		Idle.unwatch(); // stop checking for idleness
+		$http({	url:'services/auth/logout', method:'GET'})
+		.success ( function () {
+			console.log("logged out");
+			deferred.resolve();
+			$location.path("/login");
+		})
+		.error( function (data, status) {
+			console.log("error logging out");
+			deferred.reject(data);
+			$location.path("/login");
+		});		
+		return deferred.promise;
+	}
+	
+	function getAuthInfo () {
+		return authInfo;
+	}
+
+	function isLoggedIn() {
+        if (getUsername())
+            return true;
+        return false;
+	}
+
+	function getUsername() {
+	    if (authInfo && authInfo.username)
+	        return authInfo.username;
+	    else
+	        return null;
+	}
+
+	function readTicket() {
+        var matches = RegExp( "^([^:]+)\:(.*)$" ).exec( $cookies.get("rvdticket") );
+        if (!!matches) {
+            authInfo.rvdticket = matches[2];
+            authInfo.username = matches[1];
+        } else {
+            authInfo.rvdticket = undefined;
+            authInfo.username = undefined;
+        }
+	}
+	
+	function clearTicket () {
+		$cookies.remove("rvdticket");
+		authInfo.rvdticket = undefined;
+		authInfo.username = undefined;
+	}
+
+	// checks that typical access to RVD services is allowed. A required role can be passed too
+	function checkRvdAccess(role) {
+	    // TODO implement role checking
+	    // ...
+	    var deferred = $q.defer();
+	    if (isLoggedIn()) {
+	        deferred.resolve();
+	    } else {
+	        deferred.reject('NEED_LOGIN');
+	    }
+	    return deferred.promise;
+	}
+
+    // public interface
+
+    return {
+        refresh: refresh,
+        getUsername: getUsername,
+        isLoggedIn: isLoggedIn,
+        doLogin: doLogin,
+        clearTicket: clearTicket,
+        getAuthInfo: getAuthInfo,
+        doLogout: doLogout,
+        checkRvdAccess: checkRvdAccess
+	}
 });
 
 angular.module('Rvd').service('projectSettingsService', ['$http','$q','$modal', '$resource', function ($http,$q,$modal,$resource) {
@@ -110,14 +193,14 @@ angular.module('Rvd').service('projectSettingsService', ['$http','$q','$modal', 
 	}
 	
 	// refreshes cachedProjectSettings asynchronously
-	service.refresh = function (name) {
-		var resource = $resource('services/projects/:projectName/settings');
-		cachedProjectSettings = resource.get({projectName:name});
+	service.refresh = function (applicationSid) {
+		var resource = $resource('services/projects/:applicationSid/settings');
+		cachedProjectSettings = resource.get({applicationSid:applicationSid});
 	}
 	
-	service.retrieve = function (name) {
+	service.retrieve = function (applicationSid) {
 		var deferred = $q.defer();
-		$http({method:'GET', url:'api/projects/'+name+'/settings'})
+		$http({method:'GET', url:'services/projects/'+applicationSid+'/settings'})
 		.success(function (data,status) {
 			cachedProjectSettings = data;
 			deferred.resolve(cachedProjectSettings);
@@ -133,22 +216,23 @@ angular.module('Rvd').service('projectSettingsService', ['$http','$q','$modal', 
 		return deferred.promise;
 	}
 	
-	service.save = function (name, projectSettings) {
+	service.save = function (applicationSid, projectSettings) {
 		var deferred = $q.defer();
-		$http({method:'POST',url:'api/projects/'+name+'/settings',data:projectSettings})
+		$http({method:'POST',url:'services/projects/'+applicationSid+'/settings',data:projectSettings})
 		.success(function (data,status) {deferred.resolve()})
 		.error(function (data,status) {deferred.reject('ERROR_SAVING_PROJECT_SETTINGS')});
 		return deferred.promise;
 	}
 	
-	function projectSettingsModelCtrl ($scope, projectSettings, projectSettingsService,  projectName, $modalInstance, notifications) {
+	function projectSettingsModelCtrl ($scope, projectSettings, projectSettingsService, applicationSid, projectName, $modalInstance, notifications) {
 		//console.log("in projectSettingsModelCtrl");
 		$scope.projectSettings = projectSettings;
 		$scope.projectName = projectName;
+		$scope.applicationSid = applicationSid;
 		
-		$scope.save = function (name, data) {
+		$scope.save = function (applicationSid, data) {
 			//console.log("saving projectSettings for " + name);
-			service.save(name, data).then(
+			service.save(applicationSid, data).then(
 				function () {$modalInstance.close()}, 
 				function () {notifications.put("Error saving project settings")}
 			);
@@ -164,7 +248,7 @@ angular.module('Rvd').service('projectSettingsService', ['$http','$q','$modal', 
 		}
 	}
 	
-	service.showModal = function(projectName) {
+	service.showModal = function(applicationSid, projectName) {
 		var modalInstance = $modal.open({
 			  templateUrl: 'templates/projectSettingsModal.html',
 			  controller: projectSettingsModelCtrl,
@@ -172,7 +256,7 @@ angular.module('Rvd').service('projectSettingsService', ['$http','$q','$modal', 
 			  resolve: {
 				projectSettings: function () {
 					var deferred = $q.defer()
-					$http.get("api/projects/"+projectName+"/settings")
+					$http.get("services/projects/"+applicationSid+"/settings")
 					.then(function (response) {
 						deferred.resolve(response.data);
 					}, function (response) {
@@ -184,12 +268,13 @@ angular.module('Rvd').service('projectSettingsService', ['$http','$q','$modal', 
 					});
 					return deferred.promise;
 				},
-				projectName: function () {return projectName;}
+				projectName: function () {return projectName;},
+				applicationSid: function () {return applicationSid;}
 			  }
 			});
 
 			modalInstance.result.then(function (projectSettings) {
-				service.refresh(projectName);
+				service.refresh(applicationSid);
 				console.log(projectSettings);
 			}, function () {});	
 	}
@@ -201,9 +286,9 @@ angular.module('Rvd').service('projectSettingsService', ['$http','$q','$modal', 
 angular.module('Rvd').service('webTriggerService', ['$http','$q','$modal', function ($http,$q,$modal) {
 	//console.log("Creating webTriggerService");
 	var service = {};
-	service.retrieve = function (name) {
+	service.retrieve = function (applicationSid) {
 		var deferred = $q.defer();
-		$http({method:'GET', url:'api/projects/'+name+'/cc'})
+		$http({method:'GET', url:'services/projects/'+applicationSid+'/cc'})
 		.success(function (data,status) {deferred.resolve(data)})
 		.error(function (data,status) {
 			if (status == 404)
@@ -214,21 +299,18 @@ angular.module('Rvd').service('webTriggerService', ['$http','$q','$modal', funct
 		return deferred.promise;
 	}
 	
-	service.save = function (name, ccInfo) {
+	service.save = function (applicationSid, ccInfo) {
 		var deferred = $q.defer();
-		$http({method:'POST',url:'api/projects/'+name+'/cc',data:ccInfo})
+		$http({method:'POST',url:'services/projects/'+applicationSid+'/cc',data:ccInfo})
 		.success(function (data,status) {deferred.resolve()})
 		.error(function (data,status) {deferred.reject('ERROR_SAVING_PROJECT_CC')});
 		return deferred.promise;
 	}
 	
-	function webTriggerModalCtrl ($scope, ccInfo, projectName, rvdSettings, $modalInstance, notifications, $location) {
-		console.log("in webTriggerModalCtrl");
-		console.log(rvdSettings);
-				
-		$scope.save = function (name, data) {
+	function webTriggerModalCtrl ($scope, ccInfo, applicationSid, rvdSettings, $modalInstance, notifications, $location) {
+		$scope.save = function (applicationSid, data) {
 			//console.log("saving ccInfo for " + name);
-			service.save(name, data).then(
+			service.save(applicationSid, data).then(
 				function () {$modalInstance.close()}, 
 				function () {notifications.put("Error saving project ccInfo")}
 			);
@@ -242,7 +324,7 @@ angular.module('Rvd').service('webTriggerService', ['$http','$q','$modal', funct
 				$scope.ccInfo = createCcInfo();
 		}	
 		$scope.getWebTriggerUrl = function () {
-			return $location.protocol() + "://" + $location.host() + ":" +  $location.port() + "/restcomm-rvd/services/apps/" +  encodeURIComponent(projectName) + '/start<span class="text-muted">?from=12345&amp;to=+1231231231&amp;token=mysecret</span>';
+			return $location.protocol() + "://" + $location.host() + ":" +  $location.port() + "/restcomm-rvd/services/apps/" +  applicationSid + '/start<span class="text-muted">?from=12345&amp;to=+1231231231&amp;token=mysecret</span>';
 		};
 		$scope.getRvdHost = function() {
 			return $location.host();
@@ -270,11 +352,11 @@ angular.module('Rvd').service('webTriggerService', ['$http','$q','$modal', funct
 		$scope.ccInfo = ccInfo;
 		setWebTriggerStatus($scope.webTriggerEnabled);
 			
-		$scope.projectName = projectName;
+		$scope.applicationSid = applicationSid;
 		$scope.rvdSettings = rvdSettings;
 	}
 	
-	service.showModal = function(projectName) {
+	service.showModal = function(applicationSid) {
 		var modalInstance = $modal.open({
 			  templateUrl: 'templates/webTriggerModal.html',
 			  controller: webTriggerModalCtrl,
@@ -282,7 +364,7 @@ angular.module('Rvd').service('webTriggerService', ['$http','$q','$modal', funct
 			  resolve: {
 				ccInfo: function () {
 					var deferred = $q.defer()
-					$http.get("api/projects/"+projectName+"/cc")
+					$http.get("services/projects/"+applicationSid+"/cc")
 					.then(function (response) {
 						deferred.resolve(response.data);
 					}, function (response) {
@@ -294,7 +376,7 @@ angular.module('Rvd').service('webTriggerService', ['$http','$q','$modal', funct
 					});
 					return deferred.promise;
 				},
-				projectName: function () {return projectName;},
+				applicationSid: function () {return applicationSid;},
 				rvdSettings: function (rvdSettings) {
 					return rvdSettings.refresh();
 				}
@@ -302,19 +384,18 @@ angular.module('Rvd').service('webTriggerService', ['$http','$q','$modal', funct
 			});
 
 			modalInstance.result.then(function (ccInfo) {
-				console.log(ccInfo);
-			}, function () {});	
+			}, function () {});
 	}
 	
 	return service;
 }]);
 
 
-angular.module('Rvd').service('projectLogService', ['$http','$q','$routeParams', 'notifications', function ($http,$q,$routeParams,notifications) {
+angular.module('Rvd').service('projectLogService', ['$http','$q','$stateParams', 'notifications', function ($http,$q,$stateParams,notifications) {
 	var service = {};
 	service.retrieve = function () {
 		var deferred = $q.defer();
-		$http({method:'GET', url:'api/apps/'+$routeParams.projectName+'/log'})
+		$http({method:'GET', url:'services/apps/'+$stateParams.applicationSid+'/log'})
 		.success(function (data,status) {
 			console.log('retrieved log data');
 			deferred.resolve(data);
@@ -326,14 +407,14 @@ angular.module('Rvd').service('projectLogService', ['$http','$q','$routeParams',
 	}
 	service.reset = function () {
 		var deferred = $q.defer();
-		$http({method:'DELETE', url:'api/apps/'+$routeParams.projectName+'/log'})
+		$http({method:'DELETE', url:'services/apps/'+$stateParams.applicationSid+'/log'})
 		.success(function (data,status) {
 			console.log('reset log data');
-			notifications.put({type:'success',message:$routeParams.projectName+' log reset'});
+			notifications.put({type:'success',message:$stateParams.projectName+' log reset'});
 			deferred.resolve();
 		})
 		.error(function (data,status) {
-			//notifications.put({type:'danger',message:'Cannot reset '+$routeParams.projectName+' log'});
+			//notifications.put({type:'danger',message:'Cannot reset '+$stateParams.projectName+' log'});
 			deferred.reject();
 		});
 		return deferred.promise;		
@@ -354,7 +435,7 @@ angular.module('Rvd').service('rvdSettings', ['$http', '$q', function ($http, $q
 	
 	service.saveSettings = function (settings) {
 		var deferred = $q.defer();
-		$http.post("api/designer/settings", settings, {headers: {'Content-Type': 'application/data'}}).success( function () {
+		$http.post("services/settings", settings, {headers: {'Content-Type': 'application/data'}}).success( function () {
 			service.data = settings; // since this is a successfull save, update the internal settings data structure
 			updateEffectiveSettings(settings);
 			deferred.resolve();
@@ -367,7 +448,7 @@ angular.module('Rvd').service('rvdSettings', ['$http', '$q', function ($http, $q
 	/* retrieves the settings from the server and updates stores them in an internal service object */
 	service.refresh = function () {
 		var deferred = $q.defer();
-		$http.get("api/designer/settings")
+		$http.get("services/settings")
 		.then(function (response) {
 			service.data = response.data;
 			updateEffectiveSettings(service.data);
@@ -667,4 +748,9 @@ angular.module('Rvd').factory('stepService', [function() {
 	
 	return stepService;
 }]);
+
+/* Service that pings RVD to keep the ticket fresh */
+angular.module('Rvd').factory('keepAliveResource', function($resource) {
+    return $resource('services/auth/keepalive');
+});
 

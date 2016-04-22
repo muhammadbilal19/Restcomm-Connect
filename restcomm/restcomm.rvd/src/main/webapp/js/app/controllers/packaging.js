@@ -1,4 +1,4 @@
-rvdMod.controller('packagingCtrl', function ($scope, $routeParams, Rapp, ConfigOption, $http, rappWrap, $location, notifications, rvdSettings, $translate) {
+rvdMod.controller('packagingCtrl', function ($scope, $stateParams, Rapp, ConfigOption, $http, rappWrap, $location, notifications, rvdSettings, $translate) {
 
 	$scope.addConfigurationOption = function(type) {
 		$scope.rapp.config.addOption(type);
@@ -12,9 +12,9 @@ rvdMod.controller('packagingCtrl', function ($scope, $routeParams, Rapp, ConfigO
 		return $scope.rapp.config.optionExists(name);
 	}
 	
-	$scope.saveRappClicked = function (projectName,rapp, submitPermitted) {
+	$scope.saveRappClicked = function (applicationSid,rapp, submitPermitted) {
 		if (submitPermitted)
-			$scope.saveRapp(projectName,rapp);
+			$scope.saveRapp(applicationSid,rapp);
 		else {
 			$translate('formSaveReguiredNotification')
 			.then(function (translatedValue) {
@@ -24,10 +24,10 @@ rvdMod.controller('packagingCtrl', function ($scope, $routeParams, Rapp, ConfigO
 		}
 	}
 	
-	$scope.saveRapp = function (projectName,rapp) {
+	$scope.saveRapp = function (applicationSid,rapp) {
 		var packed = rapp.pack();
 		$http({
-			url: 'api/projects/' + projectName + '/packaging',
+			url: 'services/ras/packaging/app/save?applicationSid=' + applicationSid,
 			method:'POST',
 			data: packed,
 			headers: {'Content-Type': 'application/data'}
@@ -39,15 +39,15 @@ rvdMod.controller('packagingCtrl', function ($scope, $routeParams, Rapp, ConfigO
 		});
 	}
 	
-	$scope.preparePackage = function (projectName) {
+	$scope.preparePackage = function (applicationSid, projectName) {
 		
 		$http({
-			url: 'api/projects/' + projectName + '/packaging/build',
+			url: 'services/ras/packaging/app/prepare?applicationSid=' + applicationSid,
 			method: 'GET'
 		})
 		.success(function () {
 			console.log("Package is ready for download");
-			$location.path("/packaging/" + projectName + "/download");
+			$location.path("/packaging/" + applicationSid + "=" + projectName + "/download");
 		});
 	}
 	
@@ -56,7 +56,8 @@ rvdMod.controller('packagingCtrl', function ($scope, $routeParams, Rapp, ConfigO
 	}
 	
 	// initialization stuff
-	$scope.projectName = $routeParams.projectName;
+	$scope.projectName = $stateParams.projectName;
+	$scope.applicationSid = $stateParams.applicationSid;
 	$scope.rapp = rappWrap.rapp;
 	$scope.isNewRapp = !rappWrap.exists;
 	//if ( !rappWrap.exists ) {
@@ -66,16 +67,17 @@ rvdMod.controller('packagingCtrl', function ($scope, $routeParams, Rapp, ConfigO
 	$scope.effectiveSettings = rvdSettings.getEffectiveSettings();
 });
 
-var packagingDownloadCtrl = rvdMod.controller('packagingDownloadCtrl', function ($scope, binaryInfo, $routeParams) {
+var packagingDownloadCtrl = rvdMod.controller('packagingDownloadCtrl', function ($scope, binaryInfo, $stateParams) {
 	$scope.test = binaryInfo;
 	$scope.binaryInfo = binaryInfo;
-	$scope.projectName = $routeParams.projectName;
+	$scope.projectName = $stateParams.projectName;
+	$scope.applicationSid = $stateParams.applicationSid;
 });
 
-packagingDownloadCtrl.getBinaryInfo = function ($q, $http, $route) {
+packagingDownloadCtrl.getBinaryInfo = function ($q, $http, $stateParams) {
 	var deferred = $q.defer();
 	$http({
-		url: 'api/projects/'+ $route.current.params.projectName + '/packaging/binary/info',
+		url: 'services/ras/packaging/binary/info?applicationSid=' + $stateParams.applicationSid,
 		method: 'GET'
 	})
 	.success(function (data, status) {
@@ -87,12 +89,12 @@ packagingDownloadCtrl.getBinaryInfo = function ($q, $http, $route) {
 }
 
 
-rvdMod.factory('RappService', ['$http', '$q', 'Rapp', '$route', '$location', function ($http, $q, Rapp,$route, $rootScope) {
+rvdMod.factory('RappService', ['$http', '$q', 'Rapp', '$stateParams', '$location', function ($http, $q, Rapp, $stateParams, $rootScope) {
 	var serviceFunctions = {
 		getRapp : function () {
 			var deferred = $q.defer();
 			$http({
-				url:  'api/projects/' + $route.current.params.projectName + '/packaging',
+				url:  'services/ras/packaging/app?applicationSid=' + $stateParams.applicationSid,
 				method: 'GET',
 			})
 			.success(function (data, status, headers, config) {

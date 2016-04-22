@@ -4,12 +4,11 @@ package org.mobicents.servlet.restcomm.rvd.http;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.ext.ExceptionMapper;
-import javax.ws.rs.ext.Provider;
 
 import org.apache.log4j.Logger;
 import org.mobicents.servlet.restcomm.rvd.exceptions.ProjectDoesNotExist;
 
-@Provider
+//@Provider - needed only if package scanning is enabled
 public class ProjectDoesNotExistMapper implements ExceptionMapper<ProjectDoesNotExist> {
     static final Logger logger = Logger.getLogger(ProjectDoesNotExistMapper.class.getName());
 

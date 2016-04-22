@@ -1,32 +1,100 @@
-App.controller('AppCtrl', function ($rootScope, $location) {
+App.controller('AppCtrl', function ($rootScope, $location, $scope, Idle, keepAliveResource, authentication, notifications, $state) {
 	$rootScope.$on("$routeChangeError", function(event, current, previous, rejection) {
         //console.log('on $routeChangeError');
-        //if ( rejection == "AUTHENTICATION_ERROR" ) {
-		//	console.log("AUTHENTICATION_ERROR");
-		//	$location.path("/login");
-		//} else {
+        if ( rejection == "AUTHENTICATION_ERROR" ) {
+			console.log("AUTHENTICATION_ERROR");
+			$location.path("/login");
+		} else {
 			$rootScope.rvdError = rejection;
-		//}
+		}
     });
-    
+
     $rootScope.$on("resourceNotFound", function(p1, p2) {
     	//console.log("resourceNotFound event caught");
     	$rootScope.rvdError = {message: "The requested resource was not found. Sorry about that."};
     });
-    
+
     $rootScope.$on('$routeChangeStart', function(){
     	$rootScope.rvdError = undefined;
 	});
+
+	$rootScope.$on('$stateChangeStart', function(event, toState, toParams, fromState, fromParams, options){
+	    console.log("switching states: " + fromState.name + " -> " + toState.name);
+	});
+
+	$rootScope.$on('$stateChangeError',  function(event, toState, toParams, fromState, fromParams, error){
+	    console.log("error switching states");
+	    // see AuthService.checkAccess() for error definitions
+	    if (error == "NEED_LOGIN")
+	        $state.go('root.public.login');
+	});
+
+	// --- ngIdle configuration
+
+    $scope.events = [];
+    // the user appears to have gone idle
+    $scope.$on('IdleStart', function() {
+    });
+    // follows after the IdleStart event, but includes a countdown until the user is considered timed out
+    // the countdown arg is the number of seconds remaining until then.
+    // you can change the title or display a warning dialog from here.
+    // you can let them resume their session by calling Idle.watch()
+    $scope.$on('IdleWarn', function(e, countdown) {
+        if (countdown == 10)
+            notifications.put({type:"warning", message:"You appear idle. Your session will soon expire!"});
+    });
+    // the user has timed out (meaning idleDuration + timeout has passed without any activity)
+    // this is where you'd log them
+    $scope.$on('IdleTimeout', function() {
+        authentication.doLogout();
+        notifications.put({type:"danger", message:"Your session has expired!", timeout:0});
+    });
+    // the user has come back from AFK and is doing stuff. if you are warning them, you can use this to hide the dialog
+    $scope.$on('IdleEnd', function() {
+    });
+    $scope.$on('Keepalive', function() {
+        keepAliveResource.get(null, function (response) {
+            // do nothing
+        }, function (response) {
+            if (response.status == 401) {
+                console.log("User not logged in. No more keepalives will be sent.");
+                Idle.unwatch();
+            }
+        });
+    });
 });
 
-App.controller('homeCtrl', function ($scope) {
-});
+var loginCtrl = angular.module('Rvd')
+.controller('loginCtrl', ['authentication', '$scope', '$http', 'notifications', '$location', function (authentication, $scope, $http, notifications, $location) {
+//	console.log("run loginCtrl ");
+	authentication.clearTicket();
 
-angular.module('Rvd').controller('projectLogCtrl', ['$scope', '$routeParams', 'projectLogService', 'notifications', function ($scope, $routeParams, projectLogService, notifications) {
+	$scope.doLogin = function (username, password) {
+	    notifications.clear();
+		authentication.doLogin(username,password).then(function () {
+			$location.path("/home");
+		}, function () {
+			notifications.put({message:"Login failed", type:"danger"});
+		})
+
+		/*$http({	url:'services/auth/login', method:'POST', data:{ username: username, password: password}})
+		.success ( function () {
+			console.log("login successful");
+
+		})
+		.error( function () {
+			console.log("error logging in");
+			notifications.put({message:"Login failed", type:"danger"});
+		});*/
+	}
+}]);
+
+angular.module('Rvd').controller('projectLogCtrl', ['$scope', '$stateParams', 'projectLogService', 'notifications', function ($scope, $stateParams, projectLogService, notifications) {
 	//console.log('in projectLogCtrl');
-	$scope.projectName = $routeParams.projectName;
+	$scope.projectName = $stateParams.projectName;
+	$scope.applicationSid = $stateParams.applicationSid;
 	$scope.logData = '';
-	
+
 	function retrieveLog() {
 		projectLogService.retrieve().then(
 			function (logData) {$scope.logData = logData;},
@@ -36,7 +104,7 @@ angular.module('Rvd').controller('projectLogCtrl', ['$scope', '$routeParams', 'p
 		)
 	}
 	$scope.retrieveLog = retrieveLog;
-	
+
 	function resetLog() {
 		projectLogService.reset().then(
 			function () {$scope.logData = "";},
@@ -46,20 +114,19 @@ angular.module('Rvd').controller('projectLogCtrl', ['$scope', '$routeParams', 'p
 		);
 	}
 	$scope.resetLog = resetLog;
-	
-	retrieveLog($scope.projectName);
+
+	retrieveLog($scope.applicationSid);
 }]);
 
-App.controller('mainMenuCtrl', ['$scope', '$location', '$modal','$q', '$http', 'auth', function ($scope, $location, $modal, $q, $http, auth ) {
-	//$scope.authInfo = authentication.getAuthInfo();
+App.controller('authMenuCtrl', ['$scope', 'authentication', '$location', '$modal','$q', '$http', function ($scope, authentication, $location, $modal, $q, $http) {
+	$scope.authInfo = authentication.getAuthInfo();
 	//$scope.username = authentication.getTicket(); //"Testuser@test.com";
-	$scope.auth = auth;
-	
+
 	function logout() {
-		console.log("logging out - NOT IMPLEMENTED");
+		authentication.doLogout();
 	}
 	$scope.logout = logout;
-	
+
 	function settingsModalCtrl ($scope, $timeout, $modalInstance, settings, rvdSettings) {
 		$scope.settings = settings;
 		$scope.rvdSettings = rvdSettings;
@@ -76,14 +143,14 @@ App.controller('mainMenuCtrl', ['$scope', '$location', '$modal','$q', '$http', '
 		$scope.cancel = function () {
 			$modalInstance.dismiss('cancel');
 		};
-		
+
 		// watch form validation status and copy to outside scope so that the OK
 		// button (which is outside the form's scope) status can be updated
 		$scope.watchForm = function (formValid) {
 			$scope.preventSubmit = !formValid;
 		}
 	};
-	
+
 	$scope.showSettingsModal = function (settings) {
 		var modalInstance = $modal.open({
 		  templateUrl: 'templates/designerSettingsModal.html',
@@ -99,13 +166,17 @@ App.controller('mainMenuCtrl', ['$scope', '$location', '$modal','$q', '$http', '
 			// $scope.settings
 		}, function () {
 		  // $log.info('Modal dismissed at: ' + new Date());
-		});		
+		});
 	}
-	
-	
-	
-	
+
+
+
+
 }]);
+
+App.controller('containerCtrl', function ($scope, authentication) {
+    $scope.authInfo = authentication.getAuthInfo();
+});
 
 App.controller('translateController', function($translate, $scope) {
   $scope.changeLanguage = function (langKey) {
@@ -118,7 +189,7 @@ App.controller('translateController', function($translate, $scope) {
 
 angular.module('Rvd').controller('wavManagerController', function ($rootScope, $scope, $http, $upload) {
 	$scope.deleteWav = function (wavItem) {
-		$http({url: 'api/projects/' + $scope.projectName + '/wavs?filename=' + wavItem.filename, method: "DELETE"})
+		$http({url: 'services/projects/' + $scope.applicationSid + '/wavs?filename=' + wavItem.filename, method: "DELETE"})
 		.success(function (data, status, headers, config) {
 			console.log("Deleted " + wavItem.filename);
 			throwRemoveWavEvent(wavItem.filename);
@@ -126,7 +197,7 @@ angular.module('Rvd').controller('wavManagerController', function ($rootScope, $
 			console.log("Error deleting " + wavItem.filename);
 		});
 	}
-	
+
 	// File upload stuff for play verbs
 	$scope.onFileSelect = function($files) {
 		    // $files: an array of files selected, each file has name, size, and
@@ -134,7 +205,7 @@ angular.module('Rvd').controller('wavManagerController', function ($rootScope, $
 		    for (var i = 0; i < $files.length; i++) {
 		      var file = $files[i];
 		      $scope.upload = $upload.upload({
-		        url: 'api/projects/' + $scope.projectName + '/wavs',
+		        url: 'services/projects/' + $scope.applicationSid + '/wavs',
 		        file: file,
 		      }).success(function(data, status, headers, config) {
 		        // file is uploaded successfully
@@ -145,10 +216,10 @@ angular.module('Rvd').controller('wavManagerController', function ($rootScope, $
 		      // .then(success, error, progress);
 		    }
 	};
-	
+
 	function throwRemoveWavEvent(wavname) {
 		$rootScope.$broadcast("project-wav-removed", wavname);
-	} 
+	}
 });
 
 angular.module('Rvd').controller('playStepController', function ($scope) {

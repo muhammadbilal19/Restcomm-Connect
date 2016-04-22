@@ -30,11 +30,11 @@ import org.mobicents.servlet.restcomm.rvd.ProjectAwareRvdContext;
 import org.mobicents.servlet.restcomm.rvd.RvdConfiguration;
 import org.mobicents.servlet.restcomm.rvd.RvdContext;
 import org.mobicents.servlet.restcomm.rvd.exceptions.AccessApiException;
-import org.mobicents.servlet.restcomm.rvd.exceptions.UnauthorizedException;
 import org.mobicents.servlet.restcomm.rvd.exceptions.callcontrol.CallControlBadRequestException;
 import org.mobicents.servlet.restcomm.rvd.exceptions.callcontrol.CallControlException;
 import org.mobicents.servlet.restcomm.rvd.exceptions.callcontrol.CallControlInvalidConfigurationException;
 import org.mobicents.servlet.restcomm.rvd.exceptions.callcontrol.UnauthorizedCallControlAccess;
+import org.mobicents.servlet.restcomm.rvd.http.RestService;
 import org.mobicents.servlet.restcomm.rvd.interpreter.Interpreter;
 import org.mobicents.servlet.restcomm.rvd.interpreter.exceptions.RemoteServiceError;
 import org.mobicents.servlet.restcomm.rvd.model.CallControlInfo;
@@ -47,10 +47,15 @@ import org.mobicents.servlet.restcomm.rvd.model.client.StateHeader;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommAccountInfoResponse;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommClient;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommCreateCallResponse;
+import org.mobicents.servlet.restcomm.rvd.security.AuthenticationService;
+import org.mobicents.servlet.restcomm.rvd.security.BasicAuthCredentials;
+import org.mobicents.servlet.restcomm.rvd.security.SecurityUtils;
+import org.mobicents.servlet.restcomm.rvd.security.exceptions.RvdSecurityException;
 import org.mobicents.servlet.restcomm.rvd.storage.FsProfileDao;
 import org.mobicents.servlet.restcomm.rvd.storage.ProfileDao;
 import org.mobicents.servlet.restcomm.rvd.storage.FsProjectStorage;
 import org.mobicents.servlet.restcomm.rvd.storage.WorkspaceStorage;
+import org.mobicents.servlet.restcomm.rvd.security.annotations.RvdAuth;
 import org.mobicents.servlet.restcomm.rvd.storage.FsCallControlInfoStorage;
 import org.mobicents.servlet.restcomm.rvd.storage.exceptions.StorageEntityNotFound;
 import org.mobicents.servlet.restcomm.rvd.storage.exceptions.StorageException;
@@ -58,7 +63,7 @@ import org.mobicents.servlet.restcomm.rvd.storage.exceptions.WavItemDoesNotExist
 import org.mobicents.servlet.restcomm.rvd.utils.RvdUtils;
 
 @Path("apps")
-public class RvdController extends SecuredRestService {
+public class RvdController extends RestService {
     static final Logger logger = Logger.getLogger(RvdController.class.getName());
 
     @Context
@@ -73,7 +78,6 @@ public class RvdController extends SecuredRestService {
     private ModelMarshaler marshaler;
 
     void init(RvdContext rvdContext) {
-        super.init();
         rvdSettings = rvdContext.getSettings();
         marshaler = rvdContext.getMarshaler();
         workspaceStorage = rvdContext.getWorkspaceStorage();
@@ -190,7 +194,7 @@ public class RvdController extends SecuredRestService {
     // Web Trigger -----
 
     private RestcommCreateCallResponse executeAction(String projectName, HttpServletRequest request, String toParam,
-            String fromParam, String accessToken, UriInfo ui) throws StorageException, CallControlException {
+                                                     String fromParam, String accessToken, UriInfo ui, String basicAuthUsername, String basicAuthPassword, String accountSid) throws StorageException, CallControlException {
 
         logger.info( "WebTrigger: Application '" + projectName + "' initiated. User request URL: " + ui.getRequestUri().toString());
         if (rvdContext.getProjectSettings().getLogging())
@@ -198,28 +202,44 @@ public class RvdController extends SecuredRestService {
 
         // load CC/WebTrigger project info
         CallControlInfo info = FsCallControlInfoStorage.loadInfo(projectName, workspaceStorage);
-        // If an access token is present in the project make sure it matches the one in the url
-        if (info.accessToken != null) {
-            if (!info.accessToken.equals(accessToken))
-                throw new UnauthorizedCallControlAccess("Web Trigger token authentication failed for '" + projectName + "'")
-                        .setRemoteIP(request.getRemoteAddr());
-        }
         // find the owner of the project
         StateHeader projectHeader = FsProjectStorage.loadStateHeader(projectName,workspaceStorage);
         String owner = projectHeader.getOwner();
         if (RvdUtils.isEmpty(owner))
             throw new CallControlException("Project '" + projectName + "' has no owner and can't be started using WebTrigger.");
-        // load user profile
-        ProfileDao profileDao = new FsProfileDao(workspaceStorage);
-        UserProfile profile = profileDao.loadUserProfile(owner);
-        if (profile == null)
-            throw new CallControlException("No user profile found for user '" + owner + "'. Web trigger cannot be used for project belonging to this user.");
+
+        // Determine authentication type. Either rely on basic http credentials OR WebTrigger token parameter
+        String username;
+        String password;
+        if ( ! RvdUtils.isEmpty(basicAuthUsername) ) {
+            // check project owner against Restcomm authenticated user
+            if( RvdUtils.safeEquals(basicAuthUsername,owner) ) {
+                username = basicAuthUsername;
+                password = basicAuthPassword;
+            } else
+                throw new UnauthorizedCallControlAccess("User '" + basicAuthUsername + "' is not authorized to access project '" + projectName + "'");
+        } else {
+            // If the token *is missing* or is wrong throw an error
+            if (RvdUtils.isEmpty(info.accessToken) || !info.accessToken.equals(accessToken) ) {
+                throw new UnauthorizedCallControlAccess("Web Trigger token authentication failed for '" + projectName + "'")
+                    .setRemoteIP(request.getRemoteAddr());
+            }
+            // load user profile
+            ProfileDao profileDao = new FsProfileDao(workspaceStorage);
+            UserProfile profile = profileDao.loadUserProfile(owner);
+            if (profile == null)
+                throw new UnauthorizedCallControlAccess("No user profile found for user '" + owner + "'. Web trigger cannot be used for project belonging to this user.");
+            username = profile.getUsername();
+            password = profile.getToken();
+        }
+        // username & password set, ownership checked
+
         // guess restcomm location
         URI restcommBaseUri = RvdConfiguration.getInstance().getRestcommBaseUri();
         // initialize a restcomm client object using various information sources
         RestcommClient restcommClient;
         try {
-            restcommClient = new RestcommClient(restcommBaseUri, profile.getUsername(), profile.getToken());
+            restcommClient = new RestcommClient(restcommBaseUri, username, password);
         } catch (RestcommClient.RestcommClientInitializationException e) {
             throw new CallControlException("WebTrigger",e);
         }
@@ -265,8 +285,11 @@ public class RvdController extends SecuredRestService {
         String from = fromParam;
         if (RvdUtils.isEmpty(from))
             from = info.lanes.get(0).startPoint.from;
-        if (RvdUtils.isEmpty(from))
-            from = projectName;
+        // fallback to the project name (sid). Only the first 10 characters are used.
+        if (RvdUtils.isEmpty(from)) {
+            if (!RvdUtils.isEmpty(projectName))
+                from = projectName.substring(0, projectName.length() < 10 ? projectName.length() : 10);
+        }
 
         if (RvdUtils.isEmpty(rcmlUrl))
             throw new CallControlInvalidConfigurationException("Could not determine application RCML url.");
@@ -276,10 +299,13 @@ public class RvdController extends SecuredRestService {
                     .setStatusCode(400);
 
         try {
-            // Find the account sid for the apiUsername
-            RestcommAccountInfoResponse accountResponse = restcommClient.get("/restcomm/2012-04-24/Accounts.json/" + restcommClient.getUsername()).done(
-                    marshaler.getGson(), RestcommAccountInfoResponse.class);
-            String accountSid = accountResponse.getSid();
+
+            // Find the account sid for the apiUsername is not available
+            if (RvdUtils.isEmpty(accountSid)) {
+                RestcommAccountInfoResponse accountResponse = restcommClient.get("/restcomm/2012-04-24/Accounts.json/" + restcommClient.getUsername()).done(
+                        marshaler.getGson(), RestcommAccountInfoResponse.class);
+                accountSid = accountResponse.getSid();
+            }
             // Create the call
             RestcommCreateCallResponse response = restcommClient.post("/restcomm/2012-04-24/Accounts/" + accountSid + "/Calls.json")
                     .addParam("From", from).addParam("To", to).addParam("Url", rcmlUrl)
@@ -300,16 +326,35 @@ public class RvdController extends SecuredRestService {
             @Context UriInfo ui) {
         String selectedMediaType = MediaType.TEXT_HTML;
         try {
+            // if basic auth headers are present try to authenticate against restcomm first
+            String authorizationHeader = request.getHeader("Authorization");
+            BasicAuthCredentials basicCredentials = SecurityUtils.parseBasicAuthHeader(authorizationHeader);
+            String username = null;
+            String password = null;
+            String accountSid = null;
+            if (basicCredentials != null) {
+                AuthenticationService authService = new AuthenticationService();
+                try {
+                    RestcommAccountInfoResponse accountInfo = authService.authenticate(basicCredentials.getUsername(), basicCredentials.getPassword());
+                    if (accountInfo != null) {
+                        username = accountInfo.getEmail_address();
+                        password = basicCredentials.getPassword();
+                        accountSid = accountInfo.getSid();
+                    }
+                } catch (RvdSecurityException e) {
+                    logger.warn(e);
+                }
+            }
             rvdContext = new ProjectAwareRvdContext(projectName, request, servletContext);
             init(rvdContext);
             RestcommCreateCallResponse createCallResponse = executeAction(projectName, request, toParam, fromParam,
-                    accessToken, ui);
+                    accessToken, ui, username, password, accountSid);
             return buildWebTriggerHtmlResponse("Web Trigger", "Create call", "success",
                     "Created call with SID " + createCallResponse.getSid() + " from " + createCallResponse.getFrom() + " to "
                             + createCallResponse.getTo(), 200);
         } catch (UnauthorizedCallControlAccess e) {
-            logger.warn("", e);
-            return buildWebTriggerHtmlResponse("Web Trigger", "Create call", "failure", e.getMessage(), 401);
+            logger.warn(e);
+            return buildWebTriggerHtmlResponse("Web Trigger", "Create call", "failure", "Authentication error", 401);
         } catch (CallControlException e) {
             logger.error("", e);
             int httpStatus = 500;
@@ -332,15 +377,33 @@ public class RvdController extends SecuredRestService {
             @QueryParam("to") String toParam, @QueryParam("from") String fromParam, @QueryParam("token") String accessToken,
             @Context UriInfo ui) {
         String selectedMediaType = MediaType.APPLICATION_JSON;
-
         try {
+            // if basic auth headers are present try to authenticate against restcomm first
+            String authorizationHeader = request.getHeader("Authorization");
+            BasicAuthCredentials basicCredentials = SecurityUtils.parseBasicAuthHeader(authorizationHeader);
+            String username = null;
+            String password = null;
+            String accountSid = null;
+            if (basicCredentials != null) {
+                AuthenticationService authService = new AuthenticationService();
+                try {
+                    RestcommAccountInfoResponse accountInfo = authService.authenticate(basicCredentials.getUsername(), basicCredentials.getPassword());
+                    if (accountInfo != null) {
+                        username = accountInfo.getEmail_address();
+                        password = basicCredentials.getPassword();
+                        accountSid = accountInfo.getSid();
+                    }
+                } catch (RvdSecurityException e) {
+                    logger.warn(e);
+                }
+            }
             rvdContext = new ProjectAwareRvdContext(projectName, request, servletContext);
             init(rvdContext);
             RestcommCreateCallResponse createCallResponse = executeAction(projectName, request, toParam, fromParam,
-                    accessToken, ui);
+                    accessToken, ui, username, password, accountSid);
             return buildWebTriggerJsonResponse(CallControlAction.createCall, CallControlStatus.success, 200, createCallResponse);
         } catch (UnauthorizedCallControlAccess e) {
-            logger.warn("", e);
+            logger.warn(e);
             return buildWebTriggerJsonResponse(CallControlAction.createCall, CallControlStatus.failure, 401, null);
         } catch (CallControlException e) {
             logger.error("", e);
@@ -357,10 +420,10 @@ public class RvdController extends SecuredRestService {
         }
     }
 
+    @RvdAuth
     @GET
     @Path("{appname}/log")
-    public Response appLog(@PathParam("appname") String appName) throws UnauthorizedException {
-        secure("Developer");
+    public Response appLog(@PathParam("appname") String appName) {
         try {
             rvdContext = new ProjectAwareRvdContext(appName, request, servletContext);
             init(rvdContext);
@@ -390,10 +453,10 @@ public class RvdController extends SecuredRestService {
         }
     }
 
+    @RvdAuth
     @DELETE
     @Path("{appname}/log")
-    public Response resetAppLog(@PathParam("appname") String appName) throws UnauthorizedException {
-        secure("Developer");
+    public Response resetAppLog(@PathParam("appname") String appName) {
         try {
             rvdContext = new ProjectAwareRvdContext(appName, request, servletContext);
             init(rvdContext);

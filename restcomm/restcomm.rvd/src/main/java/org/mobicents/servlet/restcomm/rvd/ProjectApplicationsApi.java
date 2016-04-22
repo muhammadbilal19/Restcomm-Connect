@@ -31,12 +31,13 @@ import org.mobicents.servlet.restcomm.rvd.exceptions.AccessApiException;
 import org.mobicents.servlet.restcomm.rvd.exceptions.ApplicationAlreadyExists;
 import org.mobicents.servlet.restcomm.rvd.exceptions.ApplicationApiNotSynchedException;
 import org.mobicents.servlet.restcomm.rvd.exceptions.ApplicationsApiSyncException;
-import org.mobicents.servlet.restcomm.rvd.keycloak.IdentityContext;
 import org.mobicents.servlet.restcomm.rvd.model.ModelMarshaler;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommAccountInfoResponse;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommApplicationResponse;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommClient;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommClient.RestcommClientException;
+import org.mobicents.servlet.restcomm.rvd.security.Ticket;
+import org.mobicents.servlet.restcomm.rvd.security.TicketRepository;
 import org.mobicents.servlet.restcomm.rvd.storage.WorkspaceStorage;
 import org.mobicents.servlet.restcomm.rvd.utils.RvdUtils;
 
@@ -45,54 +46,76 @@ import org.mobicents.servlet.restcomm.rvd.utils.RvdUtils;
  */
 public class ProjectApplicationsApi {
 
+    private ServletContext servletContext;
+    private WorkspaceStorage workspaceStorage;
     private ModelMarshaler marshaler;
-    private IdentityContext identityContext;
 
     private enum AccessApiAction {
-        CREATE, DELETE, RENAME
+        CREATE, DELETE, RENAME, UPDATE
     }
 
-    public ProjectApplicationsApi(ServletContext servletContext, WorkspaceStorage workspaceStorage, ModelMarshaler marshaler, IdentityContext identityContext) {
+    public ProjectApplicationsApi(ServletContext servletContext, WorkspaceStorage workspaceStorage, ModelMarshaler marshaler) {
+        this.servletContext = servletContext;
+        this.workspaceStorage = workspaceStorage;
         this.marshaler = marshaler;
-        this.identityContext = identityContext;
     }
 
-    public void createApplication(final String friendlyName, final String projectKind)
+    public String createApplication(final String ticketId, final String friendlyName,
+            final String projectKind)
             throws ApplicationsApiSyncException, UnsupportedEncodingException {
         HashMap<String, String> params = new HashMap<String, String>();
-        String rcmlUrl = "/restcomm-rvd/services/apps/" + RvdUtils.myUrlEncode(friendlyName) + "/controller";
         params.put("FriendlyName", friendlyName);
         params.put("Kind", projectKind);
+        String applicationSid = accessApi(ticketId, params, AccessApiAction.CREATE);
+        String rcmlUrl = "/restcomm-rvd/services/apps/" + applicationSid + "/controller";
+        params.clear();
+        params.put("Sid", applicationSid);
         params.put("RcmlUrl", rcmlUrl);
-        accessApi(params, AccessApiAction.CREATE);
-
+        updateApplication(ticketId, applicationSid, null, rcmlUrl, null);
+        return applicationSid;
     }
 
-    public void rollbackCreateApplication(final String friendlyName) throws ApplicationsApiSyncException {
-        removeApplication(friendlyName);
+    public void rollbackCreateApplication(final String ticketId, final String applicationSid) throws ApplicationsApiSyncException {
+        removeApplication(ticketId, applicationSid);
     }
 
-    public void renameApplication(final String name, final String newName)
+    public void renameApplication(final String ticketId, final String applicationSid, final String newName)
             throws ApplicationsApiSyncException {
         HashMap<String, String> params = new HashMap<String, String>();
-        params.put("FriendlyName", name);
+        params.put("Sid", applicationSid);
         params.put("NewFriendlyName", newName);
-        params.put("RcmlUrl", "/restcomm-rvd/services/apps/" + RvdUtils.myUrlEncode(newName) + "/controller");
-        accessApi(params, AccessApiAction.RENAME);
+        accessApi(ticketId, params, AccessApiAction.RENAME);
     }
 
-    public void removeApplication(final String friendlyName) throws ApplicationsApiSyncException {
+    public void removeApplication(final String ticketId, final String applicationSid) throws ApplicationsApiSyncException {
         final HashMap<String, String> params = new HashMap<String, String>();
-        params.put("FriendlyName", friendlyName);
-        accessApi(params, AccessApiAction.DELETE);
+        params.put("Sid", applicationSid);
+        accessApi(ticketId, params, AccessApiAction.DELETE);
     }
 
-    private void accessApi(final HashMap<String, String> params, final AccessApiAction action)
+    public void updateApplication(final String ticketId, final String applicationSid, final String friendlyName,
+            final String rcmlUrl, final String kind) throws ApplicationsApiSyncException {
+        HashMap<String, String> params = new HashMap<String, String>();
+        params.put("Sid", applicationSid);
+        if (friendlyName != null && !friendlyName.isEmpty()) {
+            params.put("FriendlyName", friendlyName);
+        }
+        if (kind != null && !kind.isEmpty()) {
+            params.put("Kind", kind);
+        }
+        if (rcmlUrl != null && !rcmlUrl.isEmpty()) {
+            params.put("RcmlUrl", rcmlUrl);
+        }
+        accessApi(ticketId, params, AccessApiAction.UPDATE);
+    }
+
+    private String accessApi(final String ticketId, final HashMap<String, String> params, final AccessApiAction action)
             throws ApplicationsApiSyncException {
         try {
             // get ticket from repository and username
-            String authenticationToken = identityContext.getOauthTokenString();
-            String username = identityContext.getLoggedUsername();
+            Ticket ticket = TicketRepository.getInstance().findTicket(ticketId);
+            String authenticationToken = ticket.getAuthenticationToken();
+            String username = TicketRepository.getInstance().findTicket(ticketId).getUserId();
             // restcomm location
             URI restcommBaseUri = RvdConfiguration.getInstance().getRestcommBaseUri();
 
@@ -102,44 +125,44 @@ public class ProjectApplicationsApi {
                 throw new ApplicationsApiSyncException("Could not determine account to create new Application.");
 
             // create the client
-            RestcommClient client = new RestcommClient(restcommBaseUri,identityContext.getOauthTokenString());
+            RestcommClient client = new RestcommClient(restcommBaseUri,username,authenticationToken);
+            client.setAuthenticationTokenAsPassword(ticket.getCookieBased());
 
             // Find the account sid for the apiUsername
-            RestcommAccountInfoResponse accountResponse = client.get("/restcomm/2012-04-24/Accounts.json/" + identityContext.getLoggedUsername()).done(
+            RestcommAccountInfoResponse accountResponse = client.get("/restcomm/2012-04-24/Accounts.json/" + username).done(
                     marshaler.getGson(), RestcommAccountInfoResponse.class);
             String accountSid = accountResponse.getSid();
             RestcommApplicationResponse applicationResponse = null;
-            String friendlyName;
+            String applicationSid;
 
             switch (action) {
                 case DELETE:
-                    // Get application sid
-                    friendlyName = params.get("FriendlyName");
-                    friendlyName = RvdUtils.myUrlEncode(friendlyName);
+                    // Check the existence of the application
+                    applicationSid = params.get("Sid");
                     try {
                         applicationResponse = client.get(
-                                "/restcomm/2012-04-24/Accounts/" + accountSid + "/Applications/" + friendlyName + ".json")
+                                "/restcomm/2012-04-24/Accounts/" + accountSid + "/Applications/" + applicationSid + ".json")
                                 .done(marshaler.getGson(), RestcommApplicationResponse.class);
                     } catch (RestcommClientException e) {
                         if (e.getStatusCode() == 404) {
-                            return; // No reference found via API, cancel delete action
+                            return null; // No reference found via API, cancel delete action
                         } else {
                             throw e;
                         }
                     }
-                    String applicationSid = applicationResponse.getSid();
+                    applicationSid = applicationResponse.getSid();
                     if (applicationSid == null)
                         throw new ApplicationsApiSyncException("Invalid Application sid obtained from API response.");
                     // Delete application
                     client.delete("/restcomm/2012-04-24/Accounts/" + accountSid + "/Applications/" + applicationSid + ".json")
                             .done(marshaler.getGson(), RestcommApplicationResponse.class);
-                    break;
+                    return null;
                 case CREATE:
                     applicationResponse = client.post("/restcomm/2012-04-24/Accounts/" + accountSid + "/Applications.json")
                             .addParams(params).done(marshaler.getGson(), RestcommApplicationResponse.class);
                     if (applicationResponse.getSid() == null)
                         throw new ApplicationsApiSyncException("Invalid Application sid obtained from API response.");
-                    break;
+                    return applicationResponse.getSid();
                 case RENAME:
                     // Check if new name is already in use
                     String newFriendlyName = String.valueOf(params.get("NewFriendlyName"));
@@ -157,17 +180,17 @@ public class ProjectApplicationsApi {
                     if (applicationResponse != null)
                         throw new ApplicationAlreadyExists();
 
-                    // Get application sid
-                    friendlyName = params.get("FriendlyName");
-                    friendlyName = RvdUtils.myUrlEncode(friendlyName);
+                    // Get application sid to check its existence
+                    applicationSid = params.get("Sid");
 
                     try {
                     applicationResponse = client.get(
-                            "/restcomm/2012-04-24/Accounts/" + accountSid + "/Applications/" + friendlyName + ".json").done(
-                            marshaler.getGson(), RestcommApplicationResponse.class);
+                                "/restcomm/2012-04-24/Accounts/" + accountSid + "/Applications/" + applicationSid + ".json")
+                                .done(marshaler.getGson(), RestcommApplicationResponse.class);
                     } catch (RestcommClientException e) {
                         if (e.getStatusCode() == 404)
-                            throw new ApplicationApiNotSynchedException("Cannot sync project '" + friendlyName + "' rename. It seems old and does not have a respective restcomm Application. The issue will be ignored.", e); // ignore the issue if the respective Application entity does not exist (old projects). Will handle project upgrade with https://github.com/Mobicents/RestComm/issues/553
+                            throw new ApplicationApiNotSynchedException("Cannot rename project '" + applicationSid
+                                    + "'. The project was not found as restcomm Application.", e);
                         else
                             throw e; // else re-throw
                     }
@@ -177,16 +200,35 @@ public class ProjectApplicationsApi {
                         throw new ApplicationsApiSyncException("Invalid Application sid obtained from API response.");
 
                     // Rename application
-                    String rcmlUrl = String.valueOf(params.get("RcmlUrl"));
                     applicationResponse = client
                             .post("/restcomm/2012-04-24/Accounts/" + accountSid + "/Applications/" + applicationSid + ".json")
-                            .addParam("FriendlyName", newFriendlyName).addParam("RcmlUrl", rcmlUrl)
+                            .addParam("FriendlyName", newFriendlyName)
                             .done(marshaler.getGson(), RestcommApplicationResponse.class);
-                    friendlyName = applicationResponse.getFriendly_name();
-                    if (!friendlyName.equalsIgnoreCase(newFriendlyName))
+                    if (!applicationResponse.getFriendly_name().equalsIgnoreCase(newFriendlyName))
                         throw new ApplicationsApiSyncException("Fail to change the name through the API.");
+                case UPDATE:
+                    // Check the existence of the application
+                    applicationSid = params.get("Sid");
+                    try {
+                        applicationResponse = client.get(
+                                "/restcomm/2012-04-24/Accounts/" + accountSid + "/Applications/" + applicationSid + ".json")
+                                .done(marshaler.getGson(), RestcommApplicationResponse.class);
+                    } catch (RestcommClientException e) {
+                        if (e.getStatusCode() == 404) {
+                            return null; // No reference found via API, cancel delete action
+                        } else {
+                            throw e;
+                        }
+                    }
+                    applicationSid = applicationResponse.getSid();
+                    if (applicationSid == null)
+                        throw new ApplicationsApiSyncException("Invalid Application sid obtained from API response.");
+                    // Update application
+                    client.post("/restcomm/2012-04-24/Accounts/" + accountSid + "/Applications/" + applicationSid + ".json")
+                            .addParams(params).done(marshaler.getGson(), RestcommApplicationResponse.class);
+                    return null;
                 default:
-                    break;
+                    return null;
             }
         } catch (AccessApiException e) {
             if (e.getStatusCode() != null && e.getStatusCode() == 409) {

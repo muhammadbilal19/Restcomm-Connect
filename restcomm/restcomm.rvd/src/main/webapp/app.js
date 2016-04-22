@@ -10,130 +10,140 @@ var App = angular.module('Rvd', [
 	'pascalprecht.translate',
 	'ngSanitize',
 	'ngResource',
-	'ngCookies'
+	'ngCookies',
+	'ngIdle',
+	'ui.router'
 ]);
 
 var rvdMod = App;
 
+App.config(['$stateProvider','$urlRouterProvider', '$translateProvider', function ($stateProvider,$urlRouterProvider,$translateProvider) {
+    $stateProvider.state('root',{
+        resolve:{
+            init: function (initializer) {
+                console.log('Initializing RVD');
+                return initializer.init();
+            }
+        }
+    });
+    $stateProvider.state('root.public',{});
+    $stateProvider.state('root.public.login',{
+        url:"/login",
+        views: {
+            'container@': {
+                templateUrl: 'templates/login.html',
+                controller: 'loginCtrl'
+            }
+        }
+    });
+    $stateProvider.state('root.rvd',{
+        views: {
+            'authmenu@': {
+                templateUrl: 'templates/index-authmenu.html',
+                controller: 'authMenuCtrl'
+            },
+            'container@': {
+                template: '<ui-view/>',
+                controller: 'containerCtrl'
+            }
+        },
+        resolve: {
+            authorize: function (init, authentication) { // block on init ;-)
+                authentication.checkRvdAccess(); // pass required role here
+            }
+        }
+    });
+    $stateProvider.state('root.rvd.home',{
+        url:"/home",
+        templateUrl: 'templates/home.html'
+    });
+    $stateProvider.state('root.rvd.projectManager',{
+        url: '/project-manager/:projectKind',
+        templateUrl: 'templates/projectManager.html',
+        controller: 'projectManagerCtrl'
+    });
+    $stateProvider.state('root.rvd.designer', {
+        url: '/designer/:applicationSid=:projectName',
+        templateUrl : 'templates/designer.html',
+        controller : 'designerCtrl',
+        resolve: {
+            project: function(designerService, $stateParams, $state) {
+                return designerService.openProject($stateParams.applicationSid);
+            },
+            bundledWavs: function(designerService) { return designerService.getBundledWavs()}
+        }
+
+    });
+    $stateProvider.state('root.rvd.projectLog', {
+        url: '/designer/:applicationSid=:projectName/log',
+    	templateUrl : 'templates/projectLog.html',
+    	controller : 'projectLogCtrl'
+    });
+    $stateProvider.state('root.rvd.packaging',{template:'<ui-view/>'}); // does nothing for now
+    $stateProvider.state('root.rvd.packaging.details',{
+        url: '/packaging/:applicationSid=:projectName',
+        templateUrl : 'templates/packaging/form.html',
+        controller : 'packagingCtrl',
+        resolve: {
+            rappWrap: function(RappService) {return RappService.getRapp();},
+            rvdSettingsResolver: function (rvdSettings) {return rvdSettings.refresh();} // not meant to return anything back. Just trigger the fetching of the settings
+        }
+    });
+    $stateProvider.state('root.rvd.packaging.download', {
+        url:'/packaging/:applicationSid=:projectName/download',
+   		templateUrl : 'templates/packaging/download.html',
+   		controller : 'packagingDownloadCtrl',
+   		resolve: {
+   			binaryInfo: packagingDownloadCtrl.getBinaryInfo
+   		}
+    });
+    // not sure what this state does. It should probably be removed
+    $stateProvider.state('root.rvd.upgrade', {
+        url: '/upgrade/:projectName',
+        templateUrl : 'templates/upgrade.html',
+        controller : 'upgradeCtrl'
+    });
+
+    //$stateProvider.state('root.rvd.designer',{});
+    $urlRouterProvider.otherwise('/home');
+
+    $translateProvider.useStaticFilesLoader({
+        prefix: '/restcomm-rvd/languages/',
+        suffix: '.json'
+    });
+    $translateProvider.useCookieStorage();
+    $translateProvider.preferredLanguage('en-US');
+}]);
+
+/*
 App.config([ '$routeProvider', '$translateProvider', function($routeProvider, $translateProvider) {
-	
-	$routeProvider.when('/project-manager/:projectKind', {
-		templateUrl : 'templates/projectManager.html',
-		controller : 'projectManagerCtrl'
-	})
-	.when('/home', {
-		templateUrl : 'templates/home.html',
-		controller : 'homeCtrl',
-		resolve: {
-			authStatus: function (auth) {
-				return auth.secure('Developer');
-			}
-		}
-	})
-	.when('/designer/:projectName', {
-		templateUrl : 'templates/designer.html',
-		controller : 'designerCtrl',
-		resolve: {
-			//projectSettings: function (projectSettingsService, $route) {return projectSettingsService.retrieve($route.current.params.projectName);},
-			project: function(designerService, $route) { return designerService.openProject($route.current.params.projectName); },
-			bundledWavs: function(designerService) { return designerService.getBundledWavs()},
-			authStatus: function (auth) {
-				return auth.secure('Developer');
-			}
-		}
-	})
-	.when('/packaging/:projectName', {
-		templateUrl : 'templates/packaging/form.html',
-		controller : 'packagingCtrl',
-		resolve: {
-			rappWrap: function(RappService) {return RappService.getRapp();},
-			rvdSettingsResolver: function (rvdSettings) {return rvdSettings.refresh();}, // not meant to return anything back. Just trigger the fetching of the settings
-			authStatus: function (auth) {
-				return auth.secure('Developer');
-			}
-		}
-	})
-	.when('/packaging/:projectName/download', {
-		templateUrl : 'templates/packaging/download.html',
-		controller : 'packagingDownloadCtrl',
-		resolve: { 
-			binaryInfo: packagingDownloadCtrl.getBinaryInfo,
-			authStatus: function (auth) {
-				return auth.secure('Developer');
-			}
-		}
-	})	
+
 	.when('/upgrade/:projectName', {
 		templateUrl : 'templates/upgrade.html',
 		controller : 'upgradeCtrl',
 		resolve: {
-			authStatus: function (auth) {
-			return auth.secure('Developer');
-			}
+			authInfo: function (authentication) {return authentication.authResolver();}
 		}
 	})
-	.when('/designer/:projectName/log', {
-		templateUrl : 'templates/projectLog.html',
-		controller : 'projectLogCtrl',
-		resolve: {
-			authStatus: function (auth) {
-				return auth.secure('Developer');
-			}
-		}
-	})	
+
 	.otherwise({
 		redirectTo : '/home'
 	});
-	
-	$translateProvider.useStaticFilesLoader({
-  		prefix: '/restcomm-rvd/languages/',
-  		suffix: '.json'
-	});
-	$translateProvider.useCookieStorage();
-	$translateProvider.preferredLanguage('en-US');
-	
+
 }]);
+*/
 
-App.config(function($provide,$httpProvider) {
-	$provide.factory('identityInterceptor', function($q, keycloakAuth) {
-		  return {
-		    'request': function (config) {
-	            var deferred = $q.defer();
-	            if (keycloakAuth.authz.token) {
-	                keycloakAuth.authz.updateToken(5).success(function() {
-	                    config.headers = config.headers || {};
-	                    config.headers.Authorization = 'Bearer ' + keycloakAuth.authz.token;
-
-	                    deferred.resolve(config);
-	                }).error(function() {
-	                        deferred.reject('Failed to refresh token');
-	                    });
-	            }
-	            return deferred.promise;
-	        },
-		    // optional method
-		   'responseError': function(response) {
-	           if (response.status == 401) {
-	               console.log('session timeout?');
-	               logout();
-	           } else if (response.status == 403) {
-	               alert("Forbidden");
-	           } else if (response.status == 404) {
-	               //alert("Not found");
-	           } else if (response.status) {
-	               if (response.data && response.data.errorMessage) {
-	                   alert(response.data.errorMessage);
-	               } else {
-	                   alert("An unexpected server error has occurred");
-	               }
-	           }
-	           return $q.reject(response);
-	       }
-		  };
-	});
-	$httpProvider.interceptors.push('identityInterceptor');
+App.config(function(IdleProvider, KeepaliveProvider, TitleProvider) {
+    // configure Idle settings
+    IdleProvider.idle(3600); // one hour
+    IdleProvider.timeout(15); // in seconds
+    KeepaliveProvider.interval(300); // 300 sec - every five minutes
+    TitleProvider.enabled(false); // it is enabled by default
+})
+.run(function(Idle){
+    // start watching when the app runs. also starts the Keepalive service by default.
+    Idle.watch();
 });
-
 
 App.factory( 'dragService', [function () {
 	var dragInfo;
@@ -147,7 +157,7 @@ App.factory( 'dragService', [function () {
 				dragInfo = { id : dragId, model : model };
 			else
 				dragInfo = { id : dragId, class : model };
-				
+
 			return dragId;
 		},
 		popDrag:  function () {
@@ -158,19 +168,19 @@ App.factory( 'dragService', [function () {
 			}
 		},
 		dragActive: function () {
-			return pDragActive; 
+			return pDragActive;
 		}
-		
+
 	};
 	return serviceInstance;
 }]);
 
 /*
 App.factory('protos', function () {
-	var protoInstance = { 
+	var protoInstance = {
 		nodes: {
 				voice: {kind:'voice', name:'module', label:'Untitled module', steps:[], iface:{edited:false,editLabel:false}},
-				ussd: {kind:'ussd', name:'module', label:'Untitled module', steps:[], iface:{edited:false,editLabel:false}},		
+				ussd: {kind:'ussd', name:'module', label:'Untitled module', steps:[], iface:{edited:false,editLabel:false}},
 				sms: {kind:'sms', name:'module', label:'Untitled module', steps:[], iface:{edited:false,editLabel:false}},
 		},
 	};
@@ -186,7 +196,7 @@ App.filter('excludeNode', function() {
             if (item.name !== exclude_named) {
                 result.push(item);
             }
-        });                
+        });
         return result;
     }
 });
