@@ -74,10 +74,10 @@ var packagingDownloadCtrl = rvdMod.controller('packagingDownloadCtrl', function 
 	$scope.applicationSid = $stateParams.applicationSid;
 });
 
-packagingDownloadCtrl.getBinaryInfo = function ($q, $http, $route) {
+packagingDownloadCtrl.getBinaryInfo = function ($q, $http, $stateParams) {
 	var deferred = $q.defer();
 	$http({
-		url: 'services/ras/packaging/binary/info?applicationSid=' + $route.current.params.applicationSid,
+		url: 'services/ras/packaging/binary/info?applicationSid=' + $stateParams.applicationSid,
 		method: 'GET'
 	})
 	.success(function (data, status) {
@@ -89,12 +89,12 @@ packagingDownloadCtrl.getBinaryInfo = function ($q, $http, $route) {
 }
 
 
-rvdMod.factory('RappService', ['$http', '$q', 'Rapp', '$route', '$location', function ($http, $q, Rapp,$route, $rootScope) {
+rvdMod.factory('RappService', ['$http', '$q', 'Rapp', '$stateParams', '$location', function ($http, $q, Rapp, $stateParams, $rootScope) {
 	var serviceFunctions = {
 		getRapp : function () {
 			var deferred = $q.defer();
 			$http({
-				url:  'services/ras/packaging/app?applicationSid=' + $route.current.params.applicationSid,
+				url:  'services/ras/packaging/app?applicationSid=' + $stateParams.applicationSid,
 				method: 'GET',
 			})
 			.success(function (data, status, headers, config) {

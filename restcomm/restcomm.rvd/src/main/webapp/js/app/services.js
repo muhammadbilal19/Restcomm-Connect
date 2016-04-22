@@ -61,40 +61,43 @@ angular.module('Rvd').service('initializer',function (authentication, $q) {
         // Checks login status and account availability and resolves a promise when done. It always resolves. The idea is to wait for it and make decisions afterwards.
         init: function () {
             var initPromise = $q.defer();
-            if (authentication.looksAuthenticated()) {
+            authentication.refresh().then(function () {
+                initPromise.resolve();
                 // here we could try retrieving further user information
-                // ...
-                initPromise.resolve();
-            } else {
-                initPromise.resolve();
-            }
+            }, function () {
+                initPromise.resolve()
+            });
             return initPromise.promise;
         }
     };
 });
 
-angular.module('Rvd').service('authentication', ['$http', '$cookies', '$q', '$location', 'Idle', function ($http, $cookies, $q, $location, Idle) {
+angular.module('Rvd').service('authentication', function ($http, $cookies, $q, $location, Idle, keepAliveResource) {
 	var authInfo = {};
 	
 	function refresh() {
-		authInfo.rvdticket = undefined;
-		authInfo.username = undefined;
-		var matches = RegExp( "^([^:]+)\:(.*)$" ).exec( $cookies.get("rvdticket") );
-		if (matches != null) {
-			authInfo.rvdticket = matches[2];
-			authInfo.username = matches[1];
-		}
-	}	
+	    // make an actual request to see if we're logged in
+	    return keepAliveResource.get({}, function (response) {
+	        // success
+            readTicket();
+	    }, function (response) {
+	        // error
+            clearTicket();
+	    }).$promise;
+	    // a promise is returned
+	}
 	
 	function doLogin(username, password) {
 		var deferred = $q.defer();
 		$http({	url:'services/auth/login', method:'POST', data:{ username: username, password: password}})
 		.success ( function () {
 			console.log("login successful");
+			readTicket();
 			deferred.resolve();
 			Idle.watch(); // start watching for idleness if not already doing it
 		})
 		.error( function (data, status) {
+		    clearTicket();
 			console.log("error logging in");
 			deferred.reject(data);
 		});
@@ -123,7 +126,7 @@ angular.module('Rvd').service('authentication', ['$http', '$cookies', '$q', '$lo
 	}
 
 	function isLoggedIn() {
-        if (getUsername)
+        if (getUsername())
             return true;
         return false;
 	}
@@ -134,28 +137,22 @@ angular.module('Rvd').service('authentication', ['$http', '$cookies', '$q', '$lo
 	    else
 	        return null;
 	}
+
+	function readTicket() {
+        var matches = RegExp( "^([^:]+)\:(.*)$" ).exec( $cookies.get("rvdticket") );
+        if (!!matches) {
+            authInfo.rvdticket = matches[2];
+            authInfo.username = matches[1];
+        } else {
+            authInfo.rvdticket = undefined;
+            authInfo.username = undefined;
+        }
+	}
 	
 	function clearTicket () {
 		$cookies.remove("rvdticket");
 		authInfo.rvdticket = undefined;
 		authInfo.username = undefined;
-	}
-	
-	function looksAuthenticated () {
-		refresh();
-		if ( !authInfo.rvdticket )
-			return false;
-		return true;
-	}
-	
-	function authResolver() {
-		var deferred = $q.defer();
-		if ( !this.looksAuthenticated() ) {
-			deferred.reject("AUTHENTICATION_ERROR");
-		} else {
-			deferred.resolve({status:"authenticated"});
-		}
-		return deferred.promise;
 	}
 
 	// checks that typical access to RVD services is allowed. A required role can be passed too
@@ -174,17 +171,16 @@ angular.module('Rvd').service('authentication', ['$http', '$cookies', '$q', '$lo
     // public interface
 
     return {
+        refresh: refresh,
         getUsername: getUsername,
         isLoggedIn: isLoggedIn,
         doLogin: doLogin,
-        authResolver:  authResolver,
-        looksAuthenticated: looksAuthenticated,
         clearTicket: clearTicket,
         getAuthInfo: getAuthInfo,
         doLogout: doLogout,
         checkRvdAccess: checkRvdAccess
 	}
-}]);
+});
 
 angular.module('Rvd').service('projectSettingsService', ['$http','$q','$modal', '$resource', function ($http,$q,$modal,$resource) {
 	//console.log("Creating projectSettigsService");
@@ -312,9 +308,6 @@ angular.module('Rvd').service('webTriggerService', ['$http','$q','$modal', funct
 	}
 	
 	function webTriggerModalCtrl ($scope, ccInfo, applicationSid, rvdSettings, $modalInstance, notifications, $location) {
-		console.log("in webTriggerModalCtrl");
-		console.log(rvdSettings);
-				
 		$scope.save = function (applicationSid, data) {
 			//console.log("saving ccInfo for " + name);
 			service.save(applicationSid, data).then(
@@ -391,8 +384,7 @@ angular.module('Rvd').service('webTriggerService', ['$http','$q','$modal', funct
 			});
 
 			modalInstance.result.then(function (ccInfo) {
-				console.log(ccInfo);
-			}, function () {});	
+			}, function () {});
 	}
 	
 	return service;
