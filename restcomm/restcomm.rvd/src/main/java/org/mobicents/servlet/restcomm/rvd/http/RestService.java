@@ -5,10 +5,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import javax.annotation.PostConstruct;
+import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.mobicents.servlet.restcomm.rvd.RvdConfiguration;
 import org.mobicents.servlet.restcomm.rvd.exceptions.RvdException;
+import org.mobicents.servlet.restcomm.rvd.identity.IdentityProvider;
 import org.mobicents.servlet.restcomm.rvd.model.callcontrol.CallControlAction;
 import org.mobicents.servlet.restcomm.rvd.model.callcontrol.CallControlStatus;
 import org.mobicents.servlet.restcomm.rvd.model.callcontrol.CreateCallResponse;
@@ -17,6 +23,30 @@ import org.mobicents.servlet.restcomm.rvd.validation.ValidationReport;
 import com.google.gson.Gson;
 
 public class RestService {
+
+    @Context
+    HttpServletRequest request;
+    @Context
+    protected ServletContext context;
+
+    @PostConstruct
+    protected void init() {
+        RvdConfiguration config = RvdConfiguration.getInstance();
+        // if it is secured by keycloak
+        if (config.keycloakEnabled()) {
+            IdentityProvider identityProvider = (IdentityProvider) context.getAttribute(IdentityProvider.class.getName());
+            String name = identityProvider.getIdentityInstanceName();
+            if (name != null) {
+                // TODO throw keycloak-not-ready error
+                // ...
+            } else {
+
+            }
+        }
+
+
+    }
+
     protected Response buildErrorResponse(Response.Status httpStatus, RvdResponse.Status rvdStatus, RvdException exception) {
         RvdResponse rvdResponse = new RvdResponse(rvdStatus).setException(exception);
         return Response.status(httpStatus).entity(rvdResponse.asJson()).build();
