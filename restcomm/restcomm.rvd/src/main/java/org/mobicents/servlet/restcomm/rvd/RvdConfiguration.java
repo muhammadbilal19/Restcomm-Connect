@@ -203,8 +203,13 @@ public class RvdConfiguration {
         return restcommBaseUri;
     }
 
+    /**
+     * Returns a valid base url of the authorization server or null
+     *
+     * @return
+     */
     public String getAuthServerUrl() {
-        if (restcommConfig != null)
+        if (restcommConfig != null && ! RvdUtils.isEmpty(restcommConfig.getAuthServerUrl()) )
             return restcommConfig.getAuthServerUrl();
         return null;
     }

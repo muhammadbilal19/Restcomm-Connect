@@ -35,7 +35,6 @@ import org.mobicents.servlet.restcomm.rvd.exceptions.callcontrol.CallControlBadR
 import org.mobicents.servlet.restcomm.rvd.exceptions.callcontrol.CallControlException;
 import org.mobicents.servlet.restcomm.rvd.exceptions.callcontrol.CallControlInvalidConfigurationException;
 import org.mobicents.servlet.restcomm.rvd.exceptions.callcontrol.UnauthorizedCallControlAccess;
-import org.mobicents.servlet.restcomm.rvd.http.RestService;
 import org.mobicents.servlet.restcomm.rvd.interpreter.Interpreter;
 import org.mobicents.servlet.restcomm.rvd.interpreter.exceptions.RemoteServiceError;
 import org.mobicents.servlet.restcomm.rvd.model.CallControlInfo;
@@ -49,14 +48,13 @@ import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommAccountInfoResponse;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommClient;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommCreateCallResponse;
 import org.mobicents.servlet.restcomm.rvd.security.AuthenticationService;
-import org.mobicents.servlet.restcomm.rvd.security.BasicAuthCredentials;
+import org.mobicents.servlet.restcomm.rvd.identity.BasicAuthCredentials;
 import org.mobicents.servlet.restcomm.rvd.security.SecurityUtils;
 import org.mobicents.servlet.restcomm.rvd.security.exceptions.RvdSecurityException;
 import org.mobicents.servlet.restcomm.rvd.storage.FsProfileDao;
 import org.mobicents.servlet.restcomm.rvd.storage.ProfileDao;
 import org.mobicents.servlet.restcomm.rvd.storage.FsProjectStorage;
 import org.mobicents.servlet.restcomm.rvd.storage.WorkspaceStorage;
-import org.mobicents.servlet.restcomm.rvd.security.annotations.RvdAuth;
 import org.mobicents.servlet.restcomm.rvd.storage.FsCallControlInfoStorage;
 import org.mobicents.servlet.restcomm.rvd.storage.exceptions.StorageEntityNotFound;
 import org.mobicents.servlet.restcomm.rvd.storage.exceptions.StorageException;
@@ -64,7 +62,7 @@ import org.mobicents.servlet.restcomm.rvd.storage.exceptions.WavItemDoesNotExist
 import org.mobicents.servlet.restcomm.rvd.utils.RvdUtils;
 
 @Path("apps")
-public class RvdController extends RestService {
+public class RvdController extends SecuredRestService {
     static final Logger logger = Logger.getLogger(RvdController.class.getName());
 
     @Context
@@ -423,10 +421,10 @@ public class RvdController extends RestService {
         }
     }
 
-    @RvdAuth
     @GET
     @Path("{appname}/log")
     public Response appLog(@PathParam("appname") String appName) {
+        secure();
         try {
             rvdContext = new ProjectAwareRvdContext(appName, request, servletContext);
             init(rvdContext);
@@ -456,10 +454,10 @@ public class RvdController extends RestService {
         }
     }
 
-    @RvdAuth
     @DELETE
     @Path("{appname}/log")
     public Response resetAppLog(@PathParam("appname") String appName) {
+        secure();
         try {
             rvdContext = new ProjectAwareRvdContext(appName, request, servletContext);
             init(rvdContext);

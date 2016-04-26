@@ -42,7 +42,6 @@ import org.mobicents.servlet.restcomm.rvd.exceptions.project.UnsupportedProjectV
 import org.mobicents.servlet.restcomm.rvd.exceptions.ras.InvalidRestcommAppPackage;
 import org.mobicents.servlet.restcomm.rvd.exceptions.ras.RestcommAppAlreadyExists;
 import org.mobicents.servlet.restcomm.rvd.exceptions.ras.UnsupportedRasApplicationVersion;
-import org.mobicents.servlet.restcomm.rvd.http.RestService;
 import org.mobicents.servlet.restcomm.rvd.http.RvdResponse;
 import org.mobicents.servlet.restcomm.rvd.model.ModelMarshaler;
 import org.mobicents.servlet.restcomm.rvd.model.RappItem;
@@ -53,7 +52,6 @@ import org.mobicents.servlet.restcomm.rvd.model.packaging.RappBinaryInfo;
 import org.mobicents.servlet.restcomm.rvd.model.packaging.RappConfig;
 import org.mobicents.servlet.restcomm.rvd.model.project.RvdProject;
 import org.mobicents.servlet.restcomm.rvd.security.RvdUser;
-import org.mobicents.servlet.restcomm.rvd.security.annotations.RvdAuth;
 import org.mobicents.servlet.restcomm.rvd.storage.FsPackagingStorage;
 import org.mobicents.servlet.restcomm.rvd.storage.FsProjectStorage;
 import org.mobicents.servlet.restcomm.rvd.storage.WorkspaceStorage;
@@ -67,7 +65,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 @Path("ras")
-public class RasRestService extends RestService {
+public class RasRestService extends SecuredRestService {
     static final Logger logger = Logger.getLogger(RasRestService.class.getName());
 
     @Context
@@ -102,11 +100,11 @@ public class RasRestService extends RestService {
      * @param applicationSid
      * @return
      */
-    @RvdAuth
     @GET
     @Path("/packaging/app")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getAppConfig(@QueryParam("applicationSid") String applicationSid) throws StorageException, ProjectDoesNotExist {
+        secure();
         logger.debug("retrieving app package for project " + applicationSid);
 
         if (!FsPackagingStorage.hasPackaging(applicationSid, workspaceStorage))
@@ -125,10 +123,10 @@ public class RasRestService extends RestService {
      * @param applicationSid
      * @return
      */
-    @RvdAuth
     @POST
     @Path("/packaging/app/save")
     public Response saveApp(@Context HttpServletRequest request, @QueryParam("applicationSid") String applicationSid) {
+        secure();
         logger.info("saving restcomm app '" + applicationSid + "'");
         try {
             String rappData;
@@ -159,10 +157,10 @@ public class RasRestService extends RestService {
     }
 
     @GET
-    @RvdAuth
     @Path("/packaging/app/prepare")
     @Produces(MediaType.APPLICATION_JSON)
     public Response preparePackage(@QueryParam("applicationSid") String applicationSid) {
+        secure();
         logger.debug("preparig app zip for project " + applicationSid);
 
         try {
@@ -187,10 +185,10 @@ public class RasRestService extends RestService {
      * @return
      */
     @GET
-    @RvdAuth
     @Path("/packaging/binary/info")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getBinaryStatus(@QueryParam("applicationSid") String applicationSid) {
+        secure();
         logger.debug("getting binary info for project " + applicationSid);
 
         RappBinaryInfo binaryInfo = rasService.getBinaryInfo(applicationSid);
@@ -198,9 +196,9 @@ public class RasRestService extends RestService {
     }
 
     @GET
-    @RvdAuth
     @Path("/packaging/download")
     public Response downloadPackage(@QueryParam("projectName") String projectName, @QueryParam("applicationSid") String applicationSid) {
+        secure();
         logger.debug("downloading app zip for project " + applicationSid);
 
         try {
@@ -219,10 +217,10 @@ public class RasRestService extends RestService {
         }
     }
 
-    @RvdAuth
     @GET
     @Path("apps")
     public Response listRapps(@Context HttpServletRequest request) {
+        secure();
         Principal loggedUser = securityContext.getUserPrincipal();
         List<ProjectItem> items;
         List<String> projectNames = new ArrayList<String>();
@@ -241,10 +239,10 @@ public class RasRestService extends RestService {
 
     }
 
-    @RvdAuth
     @POST
     @Path("apps/metadata")
     public Response listRappsByProjectSid(@Context HttpServletRequest request) throws RvdException {
+        secure();
         String applicationSids = null;
         try {
             applicationSids = IOUtils.toString(request.getInputStream(), Charset.forName("UTF-8"));
@@ -278,10 +276,10 @@ public class RasRestService extends RestService {
      * @param request
      * @return
      */
-    @RvdAuth
     @POST
     @Path("apps")
     public Response newRasApp(@Context HttpServletRequest request) {
+        secure();
         logger.info("uploading new ras app");
 
         BuildService buildService = new BuildService(workspaceStorage);
@@ -366,10 +364,10 @@ public class RasRestService extends RestService {
 
     }
 
-    @RvdAuth
     @GET
     @Path("apps/{applicationSid}/config")
     public Response getConfig(@PathParam("applicationSid") String applicationSid) {
+        secure();
         //logger.info("getting configuration options for " + projectName);
 
         RappConfig rappConfig;
@@ -396,10 +394,10 @@ public class RasRestService extends RestService {
         }
     }
 
-    @RvdAuth
     @GET
     @Path("apps/{applicationSid}")
     public Response getRapp(@PathParam("applicationSid") String applicationSid) throws StorageException {
+        secure();
         logger.info("getting info for " + applicationSid);
         try {
             Rapp rapp;
@@ -413,10 +411,10 @@ public class RasRestService extends RestService {
         }
     }
 
-    @RvdAuth
     @GET
     @Path("apps/{applicationSid}/config/dev")
     public Response getConfigFromPackaging(@PathParam("applicationSid") String applicationSid) {
+        secure();
         //logger.info("getting configuration options for " + projectName);
        try {
             Rapp rapp = FsProjectStorage.loadRappFromPackaging(applicationSid, workspaceStorage);
@@ -434,10 +432,10 @@ public class RasRestService extends RestService {
      * @param applicationSid
      * @return
      */
-    @RvdAuth
     @POST
     @Path("apps/{applicationSid}/bootstrap")
     public Response setBootstrap(@Context HttpServletRequest request, @PathParam("applicationSid") String applicationSid) {
+        secure();
         try {
             String bootstrapInfo;
             bootstrapInfo = IOUtils.toString(request.getInputStream(), Charset.forName("UTF-8"));
@@ -452,10 +450,10 @@ public class RasRestService extends RestService {
         }
     }
 
-    @RvdAuth
     @GET
     @Path("apps/{applicationSid}/bootstrap")
     public Response getBootstrap(@PathParam("applicationSid") String applicationSid) {
+        secure();
         try {
             if ( ! FsProjectStorage.hasBootstrapInfo(applicationSid, workspaceStorage) )
                 return Response.status(Status.NOT_FOUND).build();

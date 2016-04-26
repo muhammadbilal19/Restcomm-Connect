@@ -6,7 +6,6 @@ import org.keycloak.adapters.KeycloakDeployment;
 import org.keycloak.common.VerificationException;
 import org.keycloak.representations.AccessToken;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommAccountInfoResponse;
-import org.mobicents.servlet.restcomm.rvd.security.BasicAuthCredentials;
 import org.mobicents.servlet.restcomm.rvd.utils.RvdUtils;
 
 import java.nio.charset.Charset;

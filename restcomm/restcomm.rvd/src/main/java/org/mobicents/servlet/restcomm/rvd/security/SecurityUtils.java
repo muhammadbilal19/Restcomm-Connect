@@ -4,6 +4,7 @@ import javax.ws.rs.core.NewCookie;
 
 import org.apache.commons.codec.binary.Base64;
 import org.mobicents.servlet.restcomm.rvd.RvdConfiguration;
+import org.mobicents.servlet.restcomm.rvd.identity.BasicAuthCredentials;
 import org.mobicents.servlet.restcomm.rvd.security.exceptions.InvalidTicketCookie;
 
 import java.nio.charset.Charset;

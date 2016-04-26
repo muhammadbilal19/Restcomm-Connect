@@ -1,11 +1,13 @@
 package org.mobicents.servlet.restcomm.rvd.identity;
 
+import com.google.gson.Gson;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import org.apache.http.client.utils.URIBuilder;
 import org.mobicents.servlet.restcomm.rvd.RvdConfiguration;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommAccountInfoResponse;
+import org.mobicents.servlet.restcomm.rvd.utils.RvdUtils;
 
 import javax.ws.rs.core.MediaType;
 import java.net.URI;
@@ -27,7 +29,14 @@ public class AccountProvider {
     AccountProvider(String restcommUrl) {
         if (restcommUrl == null)
             throw new IllegalStateException("restcommUrl cannot be null");
-        this.restcommUrl = restcommUrl;
+        this.restcommUrl = sanitizeRestcommUrl(restcommUrl);
+    }
+
+    private String sanitizeRestcommUrl(String restcommUrl) {
+        restcommUrl = restcommUrl.trim();
+        if (restcommUrl.endsWith("/"))
+            return restcommUrl.substring(0,restcommUrl.length()-1);
+        return restcommUrl;
     }
 
     private URI buildAccountQueryUrl(String username) {
@@ -52,12 +61,17 @@ public class AccountProvider {
     public RestcommAccountInfoResponse getAccount(String username, String authorizationHeader) {
         Client jerseyClient = Client.create();
         WebResource webResource = jerseyClient.resource(buildAccountQueryUrl(username));
-        webResource.setProperty("Authorization", authorizationHeader);
-        ClientResponse response = webResource.accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        ClientResponse response = webResource.accept(MediaType.APPLICATION_JSON).header("Authorization", authorizationHeader).get(ClientResponse.class);
         if (response.getStatus() != 200)
             return null;
-        RestcommAccountInfoResponse accountInfo = response.getEntity(RestcommAccountInfoResponse.class);
+        Gson gson = new Gson();
+        RestcommAccountInfoResponse accountInfo = gson.fromJson(response.getEntity(String.class), RestcommAccountInfoResponse.class);
         return accountInfo;
+    }
+
+    public RestcommAccountInfoResponse getAccount(BasicAuthCredentials creds) {
+        String header = "Basic " + RvdUtils.buildHttpAuthorizationToken(creds.getUsername(),creds.getPassword());
+        return getAccount(creds.getUsername(), header);
     }
 
     // singleton stuff
