@@ -1,7 +1,7 @@
 package org.mobicents.servlet.restcomm.rvd.restcomm;
 
 /**
- * 
+ *
  * @author Orestis Tsakiridis
  */
 public class IdentityInstanceResponse {

@@ -85,7 +85,8 @@ public class RasRestService extends RestService {
     private ModelMarshaler marshaler;
 
     @PostConstruct
-    void init() {
+    public void init() {
+        super.init();
         rvdContext = new RvdContext(request, servletContext);
         settings = rvdContext.getSettings();
         marshaler = rvdContext.getMarshaler();

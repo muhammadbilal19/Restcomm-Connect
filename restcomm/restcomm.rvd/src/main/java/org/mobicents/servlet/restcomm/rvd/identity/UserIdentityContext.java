@@ -8,9 +8,7 @@ import org.keycloak.representations.AccessToken;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommAccountInfoResponse;
 import org.mobicents.servlet.restcomm.rvd.security.BasicAuthCredentials;
 import org.mobicents.servlet.restcomm.rvd.utils.RvdUtils;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import javax.servlet.http.HttpServletRequest;
 import java.nio.charset.Charset;
 import java.util.Set;
 import java.util.HashSet;
@@ -51,11 +49,11 @@ public class UserIdentityContext {
         }
         // try to initialize effective account using basic auth creds
         if (basicCredentials != null)
-            this.accountInfo = accountProvider.getAccountForAuthorizationHeader(authorizationHeader);
+            this.accountInfo = accountProvider.getAccount(basicCredentials.getUsername(), authorizationHeader);
         if (this.accountInfo == null && oauthToken != null) {
             // if we couldn't determine an affective account using basic auth creds, try using oauthToken
             String username = oauthToken.getPreferredUsername();
-            this.accountInfo = accountProvider.getAccountForBearerToken(authorizationHeader, username);
+            this.accountInfo = accountProvider.getAccount(username, authorizationHeader);
         }
         if (this.accountInfo != null) {
             Set<String> accountRoles = new HashSet<String>();

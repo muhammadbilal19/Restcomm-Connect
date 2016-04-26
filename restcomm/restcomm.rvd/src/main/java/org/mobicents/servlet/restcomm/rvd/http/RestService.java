@@ -5,16 +5,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-import javax.annotation.PostConstruct;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.keycloak.adapters.KeycloakDeployment;
 import org.mobicents.servlet.restcomm.rvd.RvdConfiguration;
 import org.mobicents.servlet.restcomm.rvd.exceptions.RvdException;
+import org.mobicents.servlet.restcomm.rvd.identity.AccountProvider;
 import org.mobicents.servlet.restcomm.rvd.identity.IdentityProvider;
+import org.mobicents.servlet.restcomm.rvd.identity.RequestOrigin;
+import org.mobicents.servlet.restcomm.rvd.identity.UserIdentityContext;
 import org.mobicents.servlet.restcomm.rvd.model.callcontrol.CallControlAction;
 import org.mobicents.servlet.restcomm.rvd.model.callcontrol.CallControlStatus;
 import org.mobicents.servlet.restcomm.rvd.model.callcontrol.CreateCallResponse;
@@ -28,23 +31,19 @@ public class RestService {
     HttpServletRequest request;
     @Context
     protected ServletContext context;
+    UserIdentityContext userIdentityContext;
 
-    @PostConstruct
-    protected void init() {
+    public void init() {
         RvdConfiguration config = RvdConfiguration.getInstance();
-        // if it is secured by keycloak
+        AccountProvider accountProvider = AccountProvider.getInstance();
+        KeycloakDeployment deployment = null;
+        // if it is secured by keycloak try to create a deployment too
         if (config.keycloakEnabled()) {
-            IdentityProvider identityProvider = (IdentityProvider) context.getAttribute(IdentityProvider.class.getName());
-            String name = identityProvider.getIdentityInstanceName();
-            if (name != null) {
-                // TODO throw keycloak-not-ready error
-                // ...
-            } else {
-
-            }
+            IdentityProvider identityProvider = IdentityProvider.getInstance();
+            deployment = identityProvider.getKeycloak(new RequestOrigin(request));
         }
-
-
+        String authorizationHeader = request.getHeader("Authorization");
+        userIdentityContext = new UserIdentityContext(authorizationHeader, deployment, accountProvider);
     }
 
     protected Response buildErrorResponse(Response.Status httpStatus, RvdResponse.Status rvdStatus, RvdException exception) {

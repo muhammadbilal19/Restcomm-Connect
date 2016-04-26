@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Enumeration;
 
+import javax.annotation.PostConstruct;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -77,7 +78,9 @@ public class RvdController extends RestService {
     private WorkspaceStorage workspaceStorage;
     private ModelMarshaler marshaler;
 
-    void init(RvdContext rvdContext) {
+    @PostConstruct
+    public void init(RvdContext rvdContext) {
+        super.init();
         rvdSettings = rvdContext.getSettings();
         marshaler = rvdContext.getMarshaler();
         workspaceStorage = rvdContext.getWorkspaceStorage();

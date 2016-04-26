@@ -220,4 +220,16 @@ public class RvdConfiguration {
             return restcommConfig.getRealmPublicKey();
         return null;
     }
+
+    /**
+     * Returns whether keycloak has been configured or not. It's possible that keylcoak is enabled but the
+     * Restcomm instance.is not registered. In that case the function will still return true.
+     *
+     * @return
+     */
+    public boolean keycloakEnabled() {
+        if (getAuthServerUrl() != null)
+            return true;
+        return false;
+    }
 }

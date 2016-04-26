@@ -6,7 +6,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.keycloak.adapters.KeycloakDeployment;
 import org.keycloak.adapters.KeycloakDeploymentBuilder;
 import org.keycloak.representations.adapters.config.AdapterConfig;
-import org.keycloak.representations.adapters.config.BaseAdapterConfig;
+import org.mobicents.servlet.restcomm.rvd.RvdConfiguration;
 import org.mobicents.servlet.restcomm.rvd.restcomm.IdentityInstanceResponse;
 
 import javax.ws.rs.core.MediaType;
@@ -31,7 +31,7 @@ import java.util.Map;
  * - The (cached or created) keycloak deployment is returned.
  * - RVD can now use this deployment to authorize the request.
  *
- * find a keycloak deployment for it.
+ * Note it's implemented as a lazily created singleton because restcommUrl is not available in RvdInitializationServlet :-(
  *
  * @author Orestis Tsakiridis
  */
@@ -43,7 +43,7 @@ public class IdentityProvider {
     Map<String,KeycloakDeployment> deploymentsByInstanceId = new HashMap<String,KeycloakDeployment>();
     Map<String,String> instanceIdsByOrigin = new HashMap<String,String>();
 
-    public IdentityProvider(String restcommUrl, String authServerUrl, String realm, String realmPublicKey) {
+    IdentityProvider(String restcommUrl, String authServerUrl, String realm, String realmPublicKey) {
         this.restcommUrl = restcommUrl;
         this.authServerUrl = authServerUrl;
         this.realm = realm;
@@ -55,8 +55,8 @@ public class IdentityProvider {
      * @param origin
      * @return
      */
-    public KeycloakDeployment getKeycloak(String origin) {
-        String parsedOrigin = parseOrigin(origin);
+    public KeycloakDeployment getKeycloak(RequestOrigin origin) {
+        String parsedOrigin = origin.getOrigin();
         String instanceId = instanceIdsByOrigin.get(parsedOrigin);
         if (instanceId != null) {
             // ok, there is indeed an instance id. That MUST be a keycloak deployment too. Let's return it.
@@ -89,10 +89,10 @@ public class IdentityProvider {
      *
      * @param rawOrigin
      */
-    private String parseOrigin(String rawOrigin) {
+    /*private String parseOrigin(String rawOrigin) {
         // TODO for now it just returns the rawOrigin as it is
         return rawOrigin;
-    }
+    }*/
 
     /**
      * Create the url for the request that will retrieve the identity instance info.
@@ -131,5 +131,15 @@ public class IdentityProvider {
 
         KeycloakDeployment deployment = KeycloakDeploymentBuilder.build(config);
         return deployment;
+    }
+
+    // singleton stuff
+    private static IdentityProvider instance;
+    public static IdentityProvider getInstance() {
+        if (instance == null) {
+            RvdConfiguration config = RvdConfiguration.getInstance();
+            instance = new IdentityProvider(config.getRestcommBaseUri().toString(), config.getAuthServerUrl(), config.getRealm(), config.getRealmPublicKey());
+        }
+        return instance;
     }
 }

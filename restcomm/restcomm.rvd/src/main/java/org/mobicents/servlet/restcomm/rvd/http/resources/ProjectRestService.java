@@ -98,7 +98,8 @@ public class ProjectRestService extends RestService {
     RvdContext rvdContext;
 
     @PostConstruct
-    void init() {
+    public void init() {
+        super.init();
         rvdContext = new RvdContext(request, servletContext);
         rvdSettings = rvdContext.getSettings();
         marshaler = rvdContext.getMarshaler();
