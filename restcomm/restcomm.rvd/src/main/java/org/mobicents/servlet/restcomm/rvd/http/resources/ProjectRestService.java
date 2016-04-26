@@ -156,8 +156,8 @@ public class ProjectRestService extends SecuredRestService {
         String applicationSid = null;
         logger.info("Creating project " + name);
         try {
-            applicationsApi = new ProjectApplicationsApi(servletContext, workspaceStorage, marshaler);
-            applicationSid = applicationsApi.createApplication(ticket, name, kind);
+            applicationsApi = new ProjectApplicationsApi(getUserIdentityContext());
+            applicationSid = applicationsApi.createApplication(name, kind);
             ProjectState projectState = projectService.createProject(applicationSid, kind, getLoggedUsername());
             BuildService buildService = new BuildService(workspaceStorage);
             buildService.buildProject(applicationSid, projectState);
@@ -165,7 +165,7 @@ public class ProjectRestService extends SecuredRestService {
         } catch (ProjectAlreadyExists e) {
             logger.error(e.getMessage(), e);
             try {
-                applicationsApi.rollbackCreateApplication(ticket, applicationSid);
+                applicationsApi.rollbackCreateApplication(applicationSid);
             } catch (ApplicationsApiSyncException e1) {
                 logger.error(e1.getMessage(), e1);
                 return Response.status(Status.INTERNAL_SERVER_ERROR).build();
@@ -299,9 +299,9 @@ public class ProjectRestService extends SecuredRestService {
         if (!RvdUtils.isEmpty(applicationSid) && !RvdUtils.isEmpty(projectNewName)) {
             assertProjectAvailable(applicationSid);
             try {
-                ProjectApplicationsApi applicationsApi = new ProjectApplicationsApi(servletContext, workspaceStorage, marshaler);
+                ProjectApplicationsApi applicationsApi = new ProjectApplicationsApi(getUserIdentityContext());
                 try {
-                    applicationsApi.renameApplication(ticket, applicationSid, projectNewName);
+                    applicationsApi.renameApplication(applicationSid, projectNewName);
                 } catch (ApplicationApiNotSynchedException e) {
                     logger.warn(e.getMessage());
                 }
@@ -350,8 +350,8 @@ public class ProjectRestService extends SecuredRestService {
         secure();
         if (!RvdUtils.isEmpty(applicationSid)) {
             try {
-                ProjectApplicationsApi applicationsApi = new ProjectApplicationsApi(servletContext, workspaceStorage, marshaler);
-                applicationsApi.removeApplication(ticket, applicationSid);
+                ProjectApplicationsApi applicationsApi = new ProjectApplicationsApi(getUserIdentityContext());
+                applicationsApi.removeApplication(applicationSid);
                 projectService.deleteProject(applicationSid);
                 return Response.ok().build();
             } catch (StorageException e) {
@@ -413,8 +413,8 @@ public class ProjectRestService extends SecuredRestService {
                     if (item.getName() != null) {
                         // Create application
                         String tempName = "RvdImport-" + UUID.randomUUID().toString().replace("-", "");
-                        applicationsApi = new ProjectApplicationsApi(servletContext, workspaceStorage, marshaler);
-                        applicationSid = applicationsApi.createApplication(ticket, tempName, "");
+                        applicationsApi = new ProjectApplicationsApi(getUserIdentityContext());
+                        applicationSid = applicationsApi.createApplication(tempName, "");
 
                         String effectiveProjectName = null;
 
@@ -430,11 +430,11 @@ public class ProjectRestService extends SecuredRestService {
                             String projectKind = state.getHeader().getProjectKind();
 
                             // Update application
-                            applicationsApi.updateApplication(ticket, applicationSid, effectiveProjectName, null, projectKind);
+                            applicationsApi.updateApplication(applicationSid, effectiveProjectName, null, projectKind);
                             logger.info("Successfully imported project '" + applicationSid + "' from raw archive '" + item.getName() + "'");
 
                         } catch (Exception e) {
-                            applicationsApi.rollbackCreateApplication(ticket, applicationSid);
+                            applicationsApi.rollbackCreateApplication(applicationSid);
                             throw e;
                         }
 
@@ -461,7 +461,7 @@ public class ProjectRestService extends SecuredRestService {
             logger.warn(e, e);
             logger.debug(e, e);
             try {
-                applicationsApi.rollbackCreateApplication(ticket, applicationSid);
+                applicationsApi.rollbackCreateApplication(applicationSid);
             } catch (ApplicationsApiSyncException e1) {
                 logger.error(e1.getMessage(), e1);
                 return buildErrorResponse(Status.INTERNAL_SERVER_ERROR, RvdResponse.Status.ERROR, e);

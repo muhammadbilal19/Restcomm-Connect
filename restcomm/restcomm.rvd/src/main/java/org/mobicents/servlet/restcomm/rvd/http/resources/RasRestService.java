@@ -51,7 +51,6 @@ import org.mobicents.servlet.restcomm.rvd.model.packaging.Rapp;
 import org.mobicents.servlet.restcomm.rvd.model.packaging.RappBinaryInfo;
 import org.mobicents.servlet.restcomm.rvd.model.packaging.RappConfig;
 import org.mobicents.servlet.restcomm.rvd.model.project.RvdProject;
-import org.mobicents.servlet.restcomm.rvd.security.RvdUser;
 import org.mobicents.servlet.restcomm.rvd.storage.FsPackagingStorage;
 import org.mobicents.servlet.restcomm.rvd.storage.FsProjectStorage;
 import org.mobicents.servlet.restcomm.rvd.storage.WorkspaceStorage;
@@ -271,7 +270,7 @@ public class RasRestService extends SecuredRestService {
 
     /**
      * Create a new application by uploading a ras package
-     * @param projectNameOverride - NOT IMPLEMENTED - if specified, the project should be named like this. Otherwise a best effort is made so
+     * param projectNameOverride - NOT IMPLEMENTED - if specified, the project should be named like this. Otherwise a best effort is made so
      * that the project is named according to the the package content
      * @param request
      * @return
@@ -283,8 +282,7 @@ public class RasRestService extends SecuredRestService {
         logger.info("uploading new ras app");
 
         BuildService buildService = new BuildService(workspaceStorage);
-        //String loggedUser = securityContext.getUserPrincipal() == null ? null : securityContext.getUserPrincipal().getName();
-        RvdUser loggedUser = (RvdUser) securityContext.getUserPrincipal();
+        //RvdUser loggedUser = (RvdUser) securityContext.getUserPrincipal();
         ProjectApplicationsApi applicationsApi = null;
         String applicationSid = null;
 
@@ -306,25 +304,25 @@ public class RasRestService extends SecuredRestService {
                         //projectService.addWavToProject(projectName, item.getName(), item.openStream());
                         // Create application
                         String tempName = "RasImport-" + UUID.randomUUID().toString().replace("-", "");
-                        applicationsApi = new ProjectApplicationsApi(servletContext, workspaceStorage, marshaler);
-                        applicationSid = applicationsApi.createApplication(loggedUser.getTicketId(), tempName, "");
+                        applicationsApi = new ProjectApplicationsApi(getUserIdentityContext());
+                        applicationSid = applicationsApi.createApplication(tempName, "");
 
                         String effectiveProjectName = null;
 
                         try {
                             // Import application
                             effectiveProjectName = rasService.importAppToWorkspace(applicationSid, item.openStream(),
-                                    loggedUser.getName(), projectService);
+                                    getLoggedUsername(), projectService);
                             ProjectState projectState = FsProjectStorage.loadProject(applicationSid, workspaceStorage);
 
                             // Update application
-                            applicationsApi.updateApplication(loggedUser.getTicketId(), applicationSid, effectiveProjectName,
+                            applicationsApi.updateApplication(applicationSid, effectiveProjectName,
                                     null, projectState.getHeader().getProjectKind());
 
                             // Build application
                             buildService.buildProject(applicationSid, projectState);
                         } catch (Exception e) {
-                            applicationsApi.rollbackCreateApplication(loggedUser.getTicketId(), applicationSid);
+                            applicationsApi.rollbackCreateApplication(applicationSid);
                             throw e;
                         }
 

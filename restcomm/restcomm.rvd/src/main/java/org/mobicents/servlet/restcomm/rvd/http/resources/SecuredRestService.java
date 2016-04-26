@@ -13,7 +13,7 @@ import org.mobicents.servlet.restcomm.rvd.identity.UserIdentityContext;
  * @author Orestis Tsakiridis
  */
 public class SecuredRestService extends RestService {
-    UserIdentityContext userIdentityContext;
+    private UserIdentityContext userIdentityContext;
 
     public void init() {
         RvdConfiguration config = RvdConfiguration.getInstance();
@@ -41,6 +41,10 @@ public class SecuredRestService extends RestService {
         }
     }
 
+    /**
+     * Convenience function to quickly access logged username without going through getUserIdentityContext().get...
+     * @return
+     */
     protected String getLoggedUsername() {
         return userIdentityContext.getAccountUsername();
     }

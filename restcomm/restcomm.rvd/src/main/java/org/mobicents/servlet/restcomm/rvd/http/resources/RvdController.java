@@ -47,10 +47,8 @@ import org.mobicents.servlet.restcomm.rvd.model.client.StateHeader;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommAccountInfoResponse;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommClient;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommCreateCallResponse;
-import org.mobicents.servlet.restcomm.rvd.security.AuthenticationService;
 import org.mobicents.servlet.restcomm.rvd.identity.BasicAuthCredentials;
-import org.mobicents.servlet.restcomm.rvd.security.SecurityUtils;
-import org.mobicents.servlet.restcomm.rvd.security.exceptions.RvdSecurityException;
+import org.mobicents.servlet.restcomm.rvd.identity.SecurityUtils;
 import org.mobicents.servlet.restcomm.rvd.storage.FsProfileDao;
 import org.mobicents.servlet.restcomm.rvd.storage.ProfileDao;
 import org.mobicents.servlet.restcomm.rvd.storage.FsProjectStorage;
@@ -240,7 +238,7 @@ public class RvdController extends SecuredRestService {
         // initialize a restcomm client object using various information sources
         RestcommClient restcommClient;
         try {
-            restcommClient = new RestcommClient(restcommBaseUri, username, password);
+            restcommClient = new RestcommClient(restcommBaseUri, getUserIdentityContext().getEffectiveAuthorizationHeader());
         } catch (RestcommClient.RestcommClientInitializationException e) {
             throw new CallControlException("WebTrigger",e);
         }
@@ -303,7 +301,7 @@ public class RvdController extends SecuredRestService {
 
             // Find the account sid for the apiUsername is not available
             if (RvdUtils.isEmpty(accountSid)) {
-                RestcommAccountInfoResponse accountResponse = restcommClient.get("/restcomm/2012-04-24/Accounts.json/" + restcommClient.getUsername()).done(
+                RestcommAccountInfoResponse accountResponse = restcommClient.get("/restcomm/2012-04-24/Accounts.json/" + getLoggedUsername()).done(
                         marshaler.getGson(), RestcommAccountInfoResponse.class);
                 accountSid = accountResponse.getSid();
             }
@@ -334,16 +332,11 @@ public class RvdController extends SecuredRestService {
             String password = null;
             String accountSid = null;
             if (basicCredentials != null) {
-                AuthenticationService authService = new AuthenticationService();
-                try {
-                    RestcommAccountInfoResponse accountInfo = authService.authenticate(basicCredentials.getUsername(), basicCredentials.getPassword());
-                    if (accountInfo != null) {
-                        username = accountInfo.getEmail_address();
-                        password = basicCredentials.getPassword();
-                        accountSid = accountInfo.getSid();
-                    }
-                } catch (RvdSecurityException e) {
-                    logger.warn(e);
+                RestcommAccountInfoResponse accountInfo = getUserIdentityContext().getAccountInfo();
+                if (accountInfo != null) {
+                    username = accountInfo.getEmail_address();
+                    password = basicCredentials.getPassword();
+                    accountSid = accountInfo.getSid();
                 }
             }
             rvdContext = new ProjectAwareRvdContext(projectName, request, servletContext);
@@ -386,17 +379,12 @@ public class RvdController extends SecuredRestService {
             String password = null;
             String accountSid = null;
             if (basicCredentials != null) {
-                AuthenticationService authService = new AuthenticationService();
-                try {
-                    RestcommAccountInfoResponse accountInfo = authService.authenticate(basicCredentials.getUsername(), basicCredentials.getPassword());
+                    RestcommAccountInfoResponse accountInfo = getUserIdentityContext().getAccountInfo();
                     if (accountInfo != null) {
                         username = accountInfo.getEmail_address();
                         password = basicCredentials.getPassword();
                         accountSid = accountInfo.getSid();
                     }
-                } catch (RvdSecurityException e) {
-                    logger.warn(e);
-                }
             }
             rvdContext = new ProjectAwareRvdContext(projectName, request, servletContext);
             init(rvdContext);

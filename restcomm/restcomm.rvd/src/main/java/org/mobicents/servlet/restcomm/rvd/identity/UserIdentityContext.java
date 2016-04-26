@@ -24,6 +24,7 @@ import java.util.HashSet;
  *    exist and are authenticated, basic-auth header is used to derive accountInfo.
  *  - accountRoles: It contains the roles from the account as a set. It's not null only if accountInfo is not null. It can be empty
  *    with valid accountInfo with null or empty 'roles' field.
+ *  - basicAuthHeader: Is set if the authorizationHeader was a basic-http-auth header. We keep it for ease of use so that we don't re-calculate it from basicCredentials if needed.
  *
  * How to use it:
  *
@@ -32,12 +33,19 @@ import java.util.HashSet;
  * @author Orestis Tsakiridis
  */
 public class UserIdentityContext {
-
-    private RestcommAccountInfoResponse accountInfo;
-    private Set<String> accountRoles;
     private String oauthTokenString;
     private AccessToken oauthToken;
     private BasicAuthCredentials basicCredentials; // HTTP basic auth credentials
+    // the following fields are independent form the authorization type (Basic or Oauth)
+    private String effectiveAuthHeader;
+    private AuthType authType = AuthType.None;
+    private RestcommAccountInfoResponse accountInfo;
+    private Set<String> accountRoles;
+
+    public enum AuthType {
+        Basic, Oauth, None
+    }
+
 
     public UserIdentityContext(String authorizationHeader, KeycloakDeployment deployment, AccountProvider accountProvider) {
         this.oauthTokenString = extractOauthTokenString(authorizationHeader);
@@ -47,19 +55,43 @@ public class UserIdentityContext {
             this.oauthToken = verifyOauthToken(oauthTokenString, deployment);
         }
         // try to initialize effective account using basic auth creds
-        if (basicCredentials != null)
+        if (basicCredentials != null) {
             this.accountInfo = accountProvider.getAccount(basicCredentials.getUsername(), authorizationHeader);
+            if (this.accountInfo != null) {
+                authType = AuthType.Basic;
+                effectiveAuthHeader = authorizationHeader;
+            }
+        }
         if (this.accountInfo == null && oauthToken != null) {
             // if we couldn't determine an affective account using basic auth creds, try using oauthToken
             String username = oauthToken.getPreferredUsername();
             this.accountInfo = accountProvider.getAccount(username, authorizationHeader);
+            if (this.accountInfo != null) {
+                authType = AuthType.Oauth;
+                effectiveAuthHeader = authorizationHeader;
+            }
         }
+        // set up roles
         if (this.accountInfo != null) {
             Set<String> accountRoles = new HashSet<String>();
             if ( ! RvdUtils.isEmpty(accountInfo.getRole()) )
                 accountRoles.add(accountInfo.getRole());
             this.accountRoles = accountRoles;
         }
+    }
+
+    // constructor used mainly for testing purposes
+    public UserIdentityContext() {}
+
+    // constructor used mainly for testing purposes
+    public UserIdentityContext(String oauthTokenString, AccessToken oauthToken, BasicAuthCredentials basicCredentials, String effectiveAuthHeader, AuthType authType, RestcommAccountInfoResponse accountInfo, Set<String> accountRoles) {
+        this.oauthTokenString = oauthTokenString;
+        this.oauthToken = oauthToken;
+        this.basicCredentials = basicCredentials;
+        this.effectiveAuthHeader = effectiveAuthHeader;
+        this.authType = authType;
+        this.accountInfo = accountInfo;
+        this.accountRoles = accountRoles;
     }
 
     public RestcommAccountInfoResponse getAccountInfo() {
@@ -80,6 +112,11 @@ public class UserIdentityContext {
     public Set<String> getAccountRoles() {
         return accountRoles;
     };
+
+    // return effective authorization header
+    public String getEffectiveAuthorizationHeader() {
+        return this.effectiveAuthHeader;
+    }
 
     // NOT IMPLEMENTED YET
     /*

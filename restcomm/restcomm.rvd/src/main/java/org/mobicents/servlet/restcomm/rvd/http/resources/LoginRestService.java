@@ -19,7 +19,6 @@ import org.mobicents.servlet.restcomm.rvd.identity.AccountProvider;
 import org.mobicents.servlet.restcomm.rvd.model.LoginForm;
 import org.mobicents.servlet.restcomm.rvd.restcomm.RestcommAccountInfoResponse;
 import org.mobicents.servlet.restcomm.rvd.identity.BasicAuthCredentials;
-import org.mobicents.servlet.restcomm.rvd.security.annotations.RvdAuth;
 
 import com.google.gson.Gson;
 
@@ -60,9 +59,9 @@ public class LoginRestService extends SecuredRestService {
     }
 
     @GET
-    @RvdAuth
     @Path("keepalive")
     public Response keepalive() {
+        secure();
         return Response.ok().build();
     }
 
