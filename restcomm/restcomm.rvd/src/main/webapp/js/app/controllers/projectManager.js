@@ -1,5 +1,7 @@
 App.controller('projectManagerCtrl', function ( $scope, $http, $location, $stateParams, $timeout, $upload, notifications, authentication) {
-	
+
+	var account = authentication.getAccount();
+
 	$scope.authInfo = authentication.getAuthInfo();
 	$scope.projectNameValidator = /^[^:;@#!$%^&*()+|~=`{}\\\[\]"<>?,\/]+$/;
 	$scope.projectKind = $stateParams.projectKind;
@@ -13,8 +15,9 @@ App.controller('projectManagerCtrl', function ( $scope, $http, $location, $state
 		var restcommApps;
 		var projectList = [];
 		$http({
-			url: '/restcomm/2012-04-24/Accounts/' + $scope.authInfo.username + '/Applications.json',
-			method: 'GET'
+			url: '/restcomm/2012-04-24/Accounts/' + account.sid + '/Applications.json',
+			method: 'GET',
+			headers: {Authorization: authentication.getAuthHeader()}
 		}).success(function (data, status, headers, config) {
 			restcommApps = data;
 			$http({url: 'services/projects',

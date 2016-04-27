@@ -27,6 +27,14 @@ App.controller('AppCtrl', function ($rootScope, $location, $scope, Idle, keepAli
 	    // see AuthService.checkAccess() for error definitions
 	    if (error == "NEED_LOGIN")
 	        $state.go('root.public.login');
+	    else
+	    if (error == "RVD_ACCESS_OUT_OF_SYNC") {
+	        notifications.put({type:'error', message:'Internal error. RVD authentication is out of sync.'});
+	        $state.go('root.public.login');
+	    } else
+	    if (error == "UNSUPPORTED_AUTH_TYPE") {
+	        $state.go('root.public.login')
+	    }
 	});
 
 	// --- ngIdle configuration
@@ -66,8 +74,6 @@ App.controller('AppCtrl', function ($rootScope, $location, $scope, Idle, keepAli
 
 var loginCtrl = angular.module('Rvd')
 .controller('loginCtrl', ['authentication', '$scope', '$http', 'notifications', '$location', function (authentication, $scope, $http, notifications, $location) {
-//	console.log("run loginCtrl ");
-	authentication.clearTicket();
 
 	$scope.doLogin = function (username, password) {
 	    notifications.clear();
@@ -76,16 +82,6 @@ var loginCtrl = angular.module('Rvd')
 		}, function () {
 			notifications.put({message:"Login failed", type:"danger"});
 		})
-
-		/*$http({	url:'services/auth/login', method:'POST', data:{ username: username, password: password}})
-		.success ( function () {
-			console.log("login successful");
-
-		})
-		.error( function () {
-			console.log("error logging in");
-			notifications.put({message:"Login failed", type:"danger"});
-		});*/
 	}
 }]);
 

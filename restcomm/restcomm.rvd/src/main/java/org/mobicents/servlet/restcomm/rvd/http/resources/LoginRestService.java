@@ -61,6 +61,7 @@ public class LoginRestService extends SecuredRestService {
     @GET
     @Path("keepalive")
     public Response keepalive() {
+
         secure();
         return Response.ok().build();
     }
