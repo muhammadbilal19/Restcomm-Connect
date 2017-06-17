@@ -19,21 +19,6 @@
  */
 package org.restcomm.connect.dao.mybatis;
 
-import org.apache.ibatis.session.SqlSession;
-import org.apache.ibatis.session.SqlSessionFactory;
-import org.joda.time.DateTime;
-import org.restcomm.connect.dao.exceptions.AccountHierarchyDepthCrossed;
-import org.restcomm.connect.commons.annotations.concurrency.ThreadSafe;
-import org.restcomm.connect.dao.AccountsDao;
-import org.restcomm.connect.dao.entities.Account;
-import org.restcomm.connect.commons.dao.Sid;
-
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import static org.restcomm.connect.dao.DaoUtils.readAccountStatus;
 import static org.restcomm.connect.dao.DaoUtils.readAccountType;
 import static org.restcomm.connect.dao.DaoUtils.readDateTime;
@@ -45,6 +30,22 @@ import static org.restcomm.connect.dao.DaoUtils.writeAccountType;
 import static org.restcomm.connect.dao.DaoUtils.writeDateTime;
 import static org.restcomm.connect.dao.DaoUtils.writeSid;
 import static org.restcomm.connect.dao.DaoUtils.writeUri;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.ibatis.session.SqlSession;
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.joda.time.DateTime;
+import org.restcomm.connect.commons.annotations.concurrency.ThreadSafe;
+import org.restcomm.connect.commons.dao.Sid;
+import org.restcomm.connect.dao.AccountsDao;
+import org.restcomm.connect.dao.entities.Account;
+import org.restcomm.connect.dao.entities.AccountFilter;
+import org.restcomm.connect.dao.exceptions.AccountHierarchyDepthCrossed;
 
 /**
  * @author quintana.thomas@gmail.com (Thomas Quintana)
@@ -122,10 +123,10 @@ public final class MybatisAccountsDao implements AccountsDao {
     }
 
     @Override
-    public List<Account> getChildAccounts(final Sid parentSid) {
+    public List<Account> getChildAccountsByFilters(final AccountFilter filter) {
         final SqlSession session = sessions.openSession();
         try {
-            final List<Map<String, Object>> results = session.selectList(namespace + "getChildAccounts", parentSid.toString());
+            final List<Map<String, Object>> results = session.selectList(namespace + "getChildAccountsByFilters", filter);
             final List<Account> accounts = new ArrayList<Account>();
             if (results != null && !results.isEmpty()) {
                 for (final Map<String, Object> result : results) {
@@ -135,6 +136,15 @@ public final class MybatisAccountsDao implements AccountsDao {
             return accounts;
         } finally {
             session.close();
+        }
+    }
+
+    @Override
+    public Integer getTotalChildAccounts(final AccountFilter filter) {
+
+        try (final SqlSession session = sessions.openSession();) {
+            final Integer total = session.selectOne(namespace + "getTotalChildAccounts", filter);
+            return total;
         }
     }
 

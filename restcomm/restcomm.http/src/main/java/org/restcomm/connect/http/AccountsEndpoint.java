@@ -33,6 +33,7 @@ import org.restcomm.connect.dao.ClientsDao;
 import org.restcomm.connect.dao.DaoManager;
 import org.restcomm.connect.dao.IncomingPhoneNumbersDao;
 import org.restcomm.connect.dao.entities.Account;
+import org.restcomm.connect.dao.entities.AccountFilter;
 import org.restcomm.connect.dao.entities.AccountList;
 import org.restcomm.connect.dao.entities.Client;
 import org.restcomm.connect.dao.entities.IncomingPhoneNumber;
@@ -58,6 +59,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -81,6 +84,7 @@ public class AccountsEndpoint extends SecuredEndpoint {
     protected Gson gson;
     protected XStream xstream;
     protected ClientsDao clientDao;
+    protected AccountListConverter listConverter;
 
     public AccountsEndpoint() {
         super();
@@ -98,14 +102,16 @@ public class AccountsEndpoint extends SecuredEndpoint {
         super.init(runtimeConfiguration);
         clientDao = ((DaoManager) context.getAttribute(DaoManager.class.getName())).getClientsDao();
         final AccountConverter converter = new AccountConverter(runtimeConfiguration);
+        listConverter = new AccountListConverter(runtimeConfiguration);
         final GsonBuilder builder = new GsonBuilder();
         builder.registerTypeAdapter(Account.class, converter);
+        builder.registerTypeAdapter(AccountList.class, listConverter);
         builder.setPrettyPrinting();
         gson = builder.create();
         xstream = new XStream();
         xstream.alias("RestcommResponse", RestCommResponse.class);
         xstream.registerConverter(converter);
-        xstream.registerConverter(new AccountListConverter(runtimeConfiguration));
+        xstream.registerConverter(listConverter);
         xstream.registerConverter(new RestCommResponseConverter(runtimeConfiguration));
         // Make sure there is an authenticated account present when this endpoint is used
         checkAuthenticatedAccount();
@@ -276,21 +282,27 @@ public class AccountsEndpoint extends SecuredEndpoint {
             for (IncomingPhoneNumber number : numbers) {
                 // if this is not just a SIP number try to release it by contacting the provider
                 if (number.isPureSip() == null || !number.isPureSip()) {
-                    if ( ! managerQueried )
-                        manager = new PhoneNumberProvisioningManagerProvider(rootConfiguration,context).get(); // try to retrieve/build manager only once
+                    if (!managerQueried)
+                        manager = new PhoneNumberProvisioningManagerProvider(rootConfiguration, context).get(); // try to
+                                                                                                                // retrieve/build
+                                                                                                                // manager only
+                                                                                                                // once
                     if (manager != null) {
                         try {
-                            if  (! manager.cancelNumber(IncomingPhoneNumbersEndpoint.convertIncomingPhoneNumbertoPhoneNumber(number)) ) {
-                                logger.error("Number cancelation failed for provided number '" + number.getPhoneNumber()+"'. Number entity " + number.getSid() + " will stay in database");
+                            if (!manager.cancelNumber(
+                                    IncomingPhoneNumbersEndpoint.convertIncomingPhoneNumbertoPhoneNumber(number))) {
+                                logger.error("Number cancelation failed for provided number '" + number.getPhoneNumber()
+                                        + "'. Number entity " + number.getSid() + " will stay in database");
                             } else {
                                 dao.removeIncomingPhoneNumber(number.getSid());
                             }
                         } catch (Exception e) {
-                            logger.error("Number cancelation failed for provided number '" + number.getPhoneNumber()+"'",e);
+                            logger.error("Number cancelation failed for provided number '" + number.getPhoneNumber() + "'", e);
                         }
-                    }
-                    else
-                        logger.error("Number cancelation failed for provided number '" + number.getPhoneNumber()+"'. Provisioning Manager was null. "+"Number entity " + number.getSid() + " will stay in database");
+                    } else
+                        logger.error("Number cancelation failed for provided number '" + number.getPhoneNumber()
+                                + "'. Provisioning Manager was null. " + "Number entity " + number.getSid()
+                                + " will stay in database");
                 } else {
                     // pureSIP numbers only to be removed from database. No need to contact provider
                     dao.removeIncomingPhoneNumber(number.getSid());
@@ -299,23 +311,57 @@ public class AccountsEndpoint extends SecuredEndpoint {
         }
     }
 
-
-
-    protected Response getAccounts(final MediaType responseType) {
-        //First check if the account has the required permissions in general, this way we can fail fast and avoid expensive DAO operations
+    protected Response getAccounts(UriInfo info, final MediaType responseType) {
+        // First check if the account has the required permissions in general, this way we can fail fast and avoid expensive DAO
+        // operations
         checkPermission("RestComm:Read:Accounts");
         final Account account = userIdentityContext.getEffectiveAccount();
         if (account == null) {
             return status(NOT_FOUND).build();
         } else {
             final List<Account> accounts = new ArrayList<Account>();
-//            accounts.add(account);
-            accounts.addAll(accountsDao.getChildAccounts(account.getSid()));
+            // accounts.add(account);
+            String sidFilter = info.getQueryParameters().getFirst("SID");
+            String friendlyNameFilter = info.getQueryParameters().getFirst("FriendlyName");
+            String roleFilter = info.getQueryParameters().getFirst("Role");
+            String statusFilter = info.getQueryParameters().getFirst("Status");
+            String page = info.getQueryParameters().getFirst("Page");
+            String reverse = info.getQueryParameters().getFirst("Reverse");
+            String pageSize = info.getQueryParameters().getFirst("PageSize");
+            String sortBy = info.getQueryParameters().getFirst("SortBy");
+
+            pageSize = (pageSize == null) ? "50" : pageSize;
+            page = (page == null) ? "0" : page;
+            reverse = (reverse != null && "true".equalsIgnoreCase(reverse)) ? "DESC" : "ASC";
+            sortBy = (sortBy != null) ? sortBy : "phone_number";
+
+            int limit = Integer.parseInt(pageSize);
+            int pageAsInt = Integer.parseInt(page);
+            int offset = (page == "0") ? 0 : (((pageAsInt - 1) * limit) + limit);
+
+            AccountFilter accountFilter = new AccountFilter(account.getSid().toString(), sidFilter, friendlyNameFilter,
+                    roleFilter, statusFilter);
+            final int total = accountsDao.getTotalChildAccounts(accountFilter);
+
+            if (pageAsInt > (total / limit)) {
+                return status(javax.ws.rs.core.Response.Status.BAD_REQUEST).build();
+            }
+
+            accountFilter = new AccountFilter(account.getSid().toString(), sidFilter, friendlyNameFilter, roleFilter,
+                    statusFilter, sortBy, reverse, limit, offset);
+
+            accounts.addAll(accountsDao.getChildAccountsByFilters(accountFilter));
+
+            listConverter.setCount(total);
+            listConverter.setPage(pageAsInt);
+            listConverter.setPageSize(limit);
+            listConverter.setPathUri("/" + getApiVersion(null) + "/" + info.getPath());
+
             if (APPLICATION_XML_TYPE == responseType) {
                 final RestCommResponse response = new RestCommResponse(new AccountList(accounts));
                 return ok(xstream.toXML(response), APPLICATION_XML).build();
             } else if (APPLICATION_JSON_TYPE == responseType) {
-                return ok(gson.toJson(accounts), APPLICATION_JSON).build();
+                return ok(gson.toJson(new AccountList(accounts)), APPLICATION_JSON).build();
             } else {
                 return null;
             }

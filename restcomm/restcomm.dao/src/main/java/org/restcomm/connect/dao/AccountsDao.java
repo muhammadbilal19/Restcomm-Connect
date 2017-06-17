@@ -24,6 +24,7 @@ import java.util.List;
 import org.restcomm.connect.dao.exceptions.AccountHierarchyDepthCrossed;
 import org.restcomm.connect.commons.dao.Sid;
 import org.restcomm.connect.dao.entities.Account;
+import org.restcomm.connect.dao.entities.AccountFilter;
 
 /**
  * @author quintana.thomas@gmail.com (Thomas Quintana)
@@ -47,7 +48,9 @@ public interface AccountsDao {
      */
     Account getAccountToAuthenticate(String name);
 
-    List<Account> getChildAccounts(Sid parentSid);
+    List<Account> getChildAccountsByFilters(AccountFilter filter);
+
+    Integer getTotalChildAccounts(AccountFilter filter);
 
     void removeAccount(Sid sid);
 

@@ -83,37 +83,55 @@ rcMod.controller('SubAccountsCtrl', function($scope, $resource, $stateParams, RC
     $scope.currentPage = 1;  
      $scope.maxSize = 5; //pagination max size
     $scope.entryLimit = 10; //max rows for data table
-     $scope.order = function (predicate) {  
+     /*$scope.order = function (predicate) {  
     $scope.reverse = ($scope.predicate === predicate) ? !$scope.reverse : false;  
      $scope.predicate = predicate; 
-    };
+    };*/
     $scope.statusFilter = 'Any';
   
-    var subAccountsList = RCommAccounts.query(function(list) {
-		// remove logged (parent) account from the list
-		var i = 0;
-		while (i < list.length) {
-			if (list[i].sid == $scope.sid )
-			  list.splice(i,1)
-			else
-			  i ++;
-		}
-      $scope.subAccountsList = list;
-      $scope.totalItems = list.length;
-    });;
-    
-    $scope.setEntryLimit = function(limit) {
-        $scope.entryLimit = limit;
-        $scope.numPerPage = Math.ceil($scope.subAccountsList.length / $scope.entryLimit);
-      }; 
-  
-    $scope.paginate = function (value) {  
-      var begin, end, index;  
-      begin = ($scope.currentPage - 1) * $scope.entryLimit;  
-      end = begin + $scope.entryLimit;  
-      index = $scope.subAccountsList.indexOf(value);  
-      return (begin <= index && index < end);  
-    };
+$scope.setEntryLimit = function(limit) {
+    $scope.entryLimit = limit;
+    $scope.currentPage = 1;
+    $scope.getSubAccountsList($scope.currentPage-1);
+  };
+
+  $scope.pageChanged = function() {
+    $scope.getSubAccountsList($scope.currentPage-1);
+  };
+
+  $scope.getSubAccountsList = function(page) {
+   var params = createSearchParams();
+      RCommAccounts.get($.extend({Page: page, PageSize: $scope.entryLimit}, params), function(data) {  
+      $scope.subAccountsList = data.accounts;
+      $scope.totalItems = data.total;
+      $scope.noOfPages = data.num_pages;
+      $scope.start = parseInt(data.start) + 1;
+      $scope.end = parseInt(data.end)
+      if($scope.end!=$scope.totalItems){
+        ++$scope.end;
+      }
+    });
+  }
+ var createSearchParams = function() {
+    var params = {};
+    params["SortBy"] = $scope.predicate;
+    params["Reverse"] = $scope.reverse;
+
+    return params;
+  }
+ 
+ $scope.sortBy = function(field) {
+     if ($scope.predicate != field) {
+         $scope.predicate = field;
+         $scope.reverse = false;
+     } else {
+         $scope.reverse = !$scope.reverse;
+     }
+ };
+ 
+
+   $scope.getSubAccountsList(0);
+
 
     $scope.$watch('statusFilter', function (value) {
         if (value == 'Any')
@@ -121,6 +139,7 @@ rcMod.controller('SubAccountsCtrl', function($scope, $resource, $stateParams, RC
         else
             $scope.search.status = value.toLowerCase();
     });
+
   }); 
 
 
