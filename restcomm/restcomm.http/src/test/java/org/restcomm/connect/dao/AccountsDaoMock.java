@@ -27,6 +27,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.restcomm.connect.dao.exceptions.AccountHierarchyDepthCrossed;
 import org.restcomm.connect.commons.dao.Sid;
 import org.restcomm.connect.dao.entities.Account;
+import org.restcomm.connect.dao.entities.AccountFilter;
 
 /**
  * Elementary mocking for AccountsDao to be used for endpoint unit testing mostly.
@@ -72,7 +73,7 @@ public class AccountsDaoMock implements AccountsDao {
     }
 
     @Override
-    public List<Account> getChildAccounts(Sid sid) {
+    public List<Account> getChildAccountsByFilters(AccountFilter filter) {
         throw new NotImplementedException();
     }
 
@@ -98,6 +99,11 @@ public class AccountsDaoMock implements AccountsDao {
 
     @Override
     public List<String> getAccountLineage(Account account) throws AccountHierarchyDepthCrossed {
+        throw new NotImplementedException();
+    }
+
+    @Override
+    public Integer getTotalChildAccounts(AccountFilter filter) {
         throw new NotImplementedException();
     }
 }

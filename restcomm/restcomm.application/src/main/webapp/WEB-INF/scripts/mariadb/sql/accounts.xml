@@ -24,10 +24,14 @@
 		SELECT * FROM restcomm_accounts WHERE email_address=#{name};
 	</select>
 
-	<select id="getChildAccounts" parameterType="string" resultType="hashmap">
-		SELECT * FROM restcomm_accounts WHERE parent_sid=#{parent_sid};
+	<select id="getChildAccountsByFilters" parameterType="org.restcomm.connect.dao.entities.AccountFilter" resultType="hashmap">
+		SELECT * FROM restcomm_accounts WHERE parent_sid=#{parentSid}
+		LIMIT #{limit} OFFSET #{offset}
 	</select>
 
+	<select id="getTotalChildAccounts" parameterType="org.restcomm.connect.dao.entities.AccountFilter" resultType="int">
+		SELECT count(*) FROM restcomm_accounts WHERE parent_sid=#{parentSid}
+	</select>
 	<delete id="removeAccount" parameterType="string">
 		DELETE FROM restcomm_accounts WHERE sid=#{sid};
 	</delete>
