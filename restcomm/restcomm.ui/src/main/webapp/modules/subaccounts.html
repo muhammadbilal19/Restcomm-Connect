@@ -51,55 +51,33 @@
         <table
 			ng-show="(subAccountsList | filter:search).length > 0"
 			class="table table-striped table-hover" ng-cloak>
-            <thead>
+             <thead>
                 <th class="width-5pc"
-					style="border-bottom: 3px solid #428bca; text-align: center;">SID
+                    style="border-bottom: 3px solid #428bca; text-align: center;">SID
                     <span
-					class="pull-right">
+                    class="pull-right">
                         <button
-							style="border-style: solid; border-color: #DCDCDC; border-width: 0px; background-color: #fff;"
-							ng-click="order('sid')" ;toggleD=!toggleD;reverse=toggleD">
+                            style="border-style: solid; border-color: #DCDCDC; border-width: 0px; background-color: #fff;"
+                            ng-click="">
                             <i
-								ng-class="{'fa fa-chevron-up':toggleD,'fa fa-chevron-down':!toggleD}"></i>
+                                ng-class=""></i>
                         </button>
                     </span>
                 </th>
                 <th class="width-5pc"
-					style="border-bottom: 3px solid #428bca; text-align: center;">FRIENDLY
-					NAME
-                    <span class="pull-right">
-                        <button
-							style="border-style: solid; border-color: #DCDCDC; border-width: 0px; background-color: #fff;"
-							ng-click="order('friendly_name')"
-							;toggleD=!toggleD;reverse=toggleD">
-                            <i
-								ng-class="{'fa fa-chevron-up':toggleD,'fa fa-chevron-down':!toggleD}"></i>
-                        </button>
-                    </span>
+                    style="border-bottom: 3px solid #428bca; text-align: center;" ng-click="sortBy('friendly_name');toggleD=!toggleD;reverse=toggleD;pageChanged()">FRIENDLY
+                    NAME
+                    <span class="pull-right" ng-show="predicate === 'friendly_name'"><i ng-class="{'fa fa-chevron-up':toggleD,'fa fa-chevron-down':!toggleD}"></i></span>
                 </th>
                 <th class="width-10pc"
-					style="border-bottom: 3px solid #428bca; text-align: center;">ROLE
-                    <span
-					class="pull-right">
-                        <button
-							style="border-style: solid; border-color: #DCDCDC; border-width: 0px; background-color: #fff;"
-							ng-click="order('role')" ;toggleD=!toggleD;reverse=toggleD">
-                            <i
-								ng-class="{'fa fa-chevron-up':toggleD,'fa fa-chevron-down':!toggleD}"></i>
-                        </button>
-                    </span>
+                    style="border-bottom: 3px solid #428bca; text-align: center;" ng-click="sortBy('role');toggleC=!toggleC;reverse=toggleC;pageChanged()">ROLE
+
+                    <span class="pull-right" ng-show="predicate === 'role'"><i ng-class="{'fa fa-chevron-up':toggleC,'fa fa-chevron-down':!toggleC}"></i></span>
                 </th>
                 <th class="width-10pc"
-                    style="border-bottom: 3px solid #428bca; text-align: center;">STATUS
-                    <span
-                            class="pull-right">
-                        <button
-                                style="border-style: solid; border-color: #DCDCDC; border-width: 0px; background-color: #fff;"
-                                ng-click="order('status')" ;toggleD=!toggleD;reverse=toggleD">
-                            <i
-                                    ng-class="{'fa fa-chevron-up':toggleD,'fa fa-chevron-down':!toggleD}"></i>
-                        </button>
-                    </span>
+                    style="border-bottom: 3px solid #428bca; text-align: center;" ng-click="sortBy('status');toggleE=!toggleE;reverse=toggleE;pageChanged()">STATUS
+                    
+                    <span class="pull-right" ng-show="predicate === 'status'"><i ng-class="{'fa fa-chevron-up':toggleE,'fa fa-chevron-down':!toggleE}"></i></span>
                 </th>
             </thead>
             <tbody>

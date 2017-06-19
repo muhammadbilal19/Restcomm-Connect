@@ -23,6 +23,22 @@
   
   <select id="getChildAccountsByFilters" parameterType="org.restcomm.connect.dao.entities.AccountFilter" resultType="hashmap">
     SELECT * FROM "restcomm_accounts" WHERE "parent_sid"=#{parentSid}
+    
+    <choose>
+    <when test="sortBy == 'role'">
+      order by "role" ${sortDirection}
+    </when>
+    <when test="sortBy == 'friendly_name'">
+      order by "friendly_name" ${sortDirection}
+    </when>
+    <when test="sortBy == 'status'">
+      order by "status" ${sortDirection}
+    </when>
+    <otherwise>
+      order by "friendly_name" ${sortDirection}
+    </otherwise>
+  </choose>   
+    
     LIMIT #{limit} OFFSET #{offset}
   </select>
   
