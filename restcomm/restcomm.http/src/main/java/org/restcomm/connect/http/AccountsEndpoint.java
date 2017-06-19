@@ -333,7 +333,7 @@ public class AccountsEndpoint extends SecuredEndpoint {
             pageSize = (pageSize == null) ? "50" : pageSize;
             page = (page == null) ? "0" : page;
             reverse = (reverse != null && "true".equalsIgnoreCase(reverse)) ? "DESC" : "ASC";
-            sortBy = (sortBy != null) ? sortBy : "phone_number";
+            sortBy = (sortBy != null) ? sortBy : "friendly_name";
 
             int limit = Integer.parseInt(pageSize);
             int pageAsInt = Integer.parseInt(page);
