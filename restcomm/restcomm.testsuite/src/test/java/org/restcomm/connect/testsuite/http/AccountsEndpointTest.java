@@ -1,5 +1,6 @@
 package org.restcomm.connect.testsuite.http;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sun.jersey.api.client.Client;
@@ -127,6 +128,36 @@ public class AccountsEndpointTest extends EndpointTest {
         JsonObject adminAccount = RestcommAccountsTool.getInstance().getAccount(deploymentUrl.toString(), adminUsername,
                 adminAuthToken, adminUsername);
         assertTrue(adminAccount.get("sid").getAsString().equals(adminAccountSid));
+    }
+    
+    @Test
+    public void getAccountsList() {
+        JsonObject firstPage = RestcommAccountsTool.getInstance().getAccount(deploymentUrl.toString(), adminUsername,
+                adminAuthToken, adminUsername);
+        int totalSize = firstPage.get("total").getAsInt();
+        JsonArray firstPageCallsArray = firstPage.get("accounts").getAsJsonArray();
+        int firstPageCallsArraySize = firstPageCallsArray.size();
+        assertTrue(firstPageCallsArraySize == 50);
+        assertTrue(firstPage.get("start").getAsInt() == 0);
+        assertTrue(firstPage.get("end").getAsInt() == 49);
+
+        JsonObject secondPage = (JsonObject) RestcommCallsTool.getInstance().getCalls(deploymentUrl.toString(),
+                adminAccountSid, adminAuthToken, 2, null, true);
+        JsonArray secondPageCallsArray = secondPage.get("accounts").getAsJsonArray();
+        assertTrue(secondPageCallsArray.size() == 50);
+        assertTrue(secondPage.get("start").getAsInt() == 100);
+        assertTrue(secondPage.get("end").getAsInt() == 149);
+
+ /*       JsonObject lastPage = (JsonObject) RestcommCallsTool.getInstance().getCalls(deploymentUrl.toString(), adminAccountSid,
+                adminAuthToken, firstPage.get("num_pages").getAsInt(), null, true);
+        JsonArray lastPageCallsArray = lastPage.get("calls").getAsJsonArray();
+        assertTrue(lastPageCallsArray.get(lastPageCallsArray.size() - 1).getAsJsonObject().get("sid").getAsString()
+                .equals("CAe803a594ac1649d98855eafc7535ed41"));
+        assertTrue(lastPageCallsArray.size() == 48);
+        assertTrue(lastPage.get("start").getAsInt() == 400);
+        assertTrue(lastPage.get("end").getAsInt() == 448);
+
+        assertTrue(totalSize == 448);*/
     }
 
     @Test
@@ -568,7 +599,7 @@ public class AccountsEndpointTest extends EndpointTest {
         assertEquals(200, response.getStatus());
     }
 
-    @Deployment(name = "ClientsEndpointTest", managed = true, testable = false)
+    @Deployment(name = "AccountsEndpointTest", managed = true, testable = false)
     public static WebArchive createWebArchiveNoGw() {
         logger.info("Packaging Test App");
         logger.info("version");
