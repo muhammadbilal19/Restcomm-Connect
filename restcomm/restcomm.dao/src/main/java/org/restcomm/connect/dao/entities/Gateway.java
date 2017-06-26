@@ -37,6 +37,7 @@ public final class Gateway implements Serializable {
     private final Sid sid;
     private final DateTime dateCreated;
     private final DateTime dateUpdated;
+    private final Sid accountSid;
     private final String friendlyName;
     private final String password;
     private final String proxy;
@@ -45,13 +46,14 @@ public final class Gateway implements Serializable {
     private final int timeToLive;
     private final URI uri;
 
-    public Gateway(final Sid sid, final DateTime dateCreated, final DateTime dateUpdated, final String friendlyName,
+    public Gateway(final Sid sid, final DateTime dateCreated, final DateTime dateUpdated,final Sid accountSid, final String friendlyName,
             final String password, final String proxy, final Boolean register, final String userName, final int timeToLive,
             final URI uri) {
         super();
         this.sid = sid;
         this.dateCreated = dateCreated;
         this.dateUpdated = dateUpdated;
+        this.accountSid = accountSid;
         this.friendlyName = friendlyName;
         this.password = password;
         this.proxy = proxy;
@@ -75,6 +77,10 @@ public final class Gateway implements Serializable {
 
     public DateTime getDateUpdated() {
         return dateUpdated;
+    }
+
+    public Sid getAccountSid() {
+        return accountSid;
     }
 
     public String getFriendlyName() {
@@ -106,32 +112,33 @@ public final class Gateway implements Serializable {
     }
 
     public Gateway setFriendlyName(final String friendlyName) {
-        return new Gateway(sid, dateCreated, DateTime.now(), friendlyName, password, proxy, register, userName, timeToLive, uri);
+        return new Gateway(sid, dateCreated, DateTime.now(),accountSid, friendlyName, password, proxy, register, userName, timeToLive, uri);
     }
 
     public Gateway setPassword(final String password) {
-        return new Gateway(sid, dateCreated, DateTime.now(), friendlyName, password, proxy, register, userName, timeToLive, uri);
+        return new Gateway(sid, dateCreated, DateTime.now(),accountSid, friendlyName, password, proxy, register, userName, timeToLive, uri);
     }
 
     public Gateway setProxy(final String proxy) {
-        return new Gateway(sid, dateCreated, DateTime.now(), friendlyName, password, proxy, register, userName, timeToLive, uri);
+        return new Gateway(sid, dateCreated, DateTime.now(),accountSid, friendlyName, password, proxy, register, userName, timeToLive, uri);
     }
 
     public Gateway setRegister(final boolean register) {
-        return new Gateway(sid, dateCreated, DateTime.now(), friendlyName, password, proxy, register, userName, timeToLive, uri);
+        return new Gateway(sid, dateCreated, DateTime.now(),accountSid, friendlyName, password, proxy, register, userName, timeToLive, uri);
     }
 
     public Gateway setUserName(final String userName) {
-        return new Gateway(sid, dateCreated, DateTime.now(), friendlyName, password, proxy, register, userName, timeToLive, uri);
+        return new Gateway(sid, dateCreated, DateTime.now(),accountSid, friendlyName, password, proxy, register, userName, timeToLive, uri);
     }
 
     public Gateway setTimeToLive(final int timeToLive) {
-        return new Gateway(sid, dateCreated, DateTime.now(), friendlyName, password, proxy, register, userName, timeToLive, uri);
+        return new Gateway(sid, dateCreated, DateTime.now(),accountSid, friendlyName, password, proxy, register, userName, timeToLive, uri);
     }
 
     @NotThreadSafe
     public static final class Builder {
         private Sid sid;
+        private Sid accountSid;
         private String friendlyName;
         private String password;
         private String proxy;
@@ -146,7 +153,7 @@ public final class Gateway implements Serializable {
 
         public Gateway build() {
             final DateTime now = DateTime.now();
-            return new Gateway(sid, now, now, friendlyName, password, proxy, register, userName, timeToLive, uri);
+            return new Gateway(sid, now, now, accountSid,friendlyName, password, proxy, register, userName, timeToLive, uri);
         }
 
         public void setSid(final Sid sid) {
@@ -155,6 +162,10 @@ public final class Gateway implements Serializable {
 
         public void setFriendlyName(final String friendlyName) {
             this.friendlyName = friendlyName;
+        }
+
+        public void setAccountSid(Sid accountSid) {
+            this.accountSid = accountSid;
         }
 
         public void setPassword(final String password) {
