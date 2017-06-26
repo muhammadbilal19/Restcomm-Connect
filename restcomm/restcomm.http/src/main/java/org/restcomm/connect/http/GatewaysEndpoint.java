@@ -69,7 +69,7 @@ public class GatewaysEndpoint extends SecuredEndpoint {
         proxyManager = (ActorRef) context.getAttribute("org.restcomm.connect.telephony.proxy.ProxyManager");
     }
 
-    private Gateway createFrom(final MultivaluedMap<String, String> data) {
+    private Gateway createFrom(final Sid accountSid,final MultivaluedMap<String, String> data) {
         final Gateway.Builder builder = Gateway.builder();
         final Sid sid = Sid.generate(Sid.Type.GATEWAY);
         builder.setSid(sid);
@@ -78,6 +78,7 @@ public class GatewaysEndpoint extends SecuredEndpoint {
             friendlyName = data.getFirst("UserName");
         }
         builder.setFriendlyName(friendlyName);
+        builder.setAccountSid(accountSid);
         builder.setPassword(data.getFirst("Password"));
         builder.setProxy(data.getFirst("Proxy"));
         final boolean register = Boolean.parseBoolean(data.getFirst("Register"));
