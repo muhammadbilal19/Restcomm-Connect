@@ -305,6 +305,7 @@ CREATE TABLE restcomm_gateways (
 sid VARCHAR(34) NOT NULL PRIMARY KEY,
 date_created DATETIME NOT NULL,
 date_updated DATETIME NOT NULL,
+account_sid VARCHAR(34) NOT NULL,
 friendly_name VARCHAR(64),
 user_name VARCHAR(255),
 password VARCHAR(255),

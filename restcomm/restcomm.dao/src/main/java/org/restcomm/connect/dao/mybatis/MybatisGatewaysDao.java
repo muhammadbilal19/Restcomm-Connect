@@ -93,6 +93,23 @@ public final class MybatisGatewaysDao implements GatewaysDao {
     }
 
     @Override
+    public List<Gateway> getGateways(final Sid accountSid) {
+        final SqlSession session = sessions.openSession();
+        try {
+            final List<Map<String, Object>> results = session.selectList(namespace + "getGatewaysByAccount",accountSid.toString());
+            final List<Gateway> gateways = new ArrayList<Gateway>();
+            if (results != null && !results.isEmpty()) {
+                for (final Map<String, Object> result : results) {
+                    gateways.add(toGateway(result));
+                }
+            }
+            return gateways;
+        } finally {
+            session.close();
+        }
+    }
+
+    @Override
     public void removeGateway(final Sid sid) {
         final SqlSession session = sessions.openSession();
         try {
@@ -116,6 +133,7 @@ public final class MybatisGatewaysDao implements GatewaysDao {
 
     private Gateway toGateway(final Map<String, Object> map) {
         final Sid sid = DaoUtils.readSid(map.get("sid"));
+        final Sid accountSid = DaoUtils.readSid(map.get("account_sid"));
         final DateTime dateCreated = DaoUtils.readDateTime(map.get("date_created"));
         final DateTime dateUpdated = DaoUtils.readDateTime(map.get("date_updated"));
         final String friendlName = DaoUtils.readString(map.get("friendly_name"));
@@ -125,12 +143,13 @@ public final class MybatisGatewaysDao implements GatewaysDao {
         final String userAgent = DaoUtils.readString(map.get("user_name"));
         final Integer timeToLive = DaoUtils.readInteger(map.get("ttl"));
         final URI uri = DaoUtils.readUri(map.get("uri"));
-        return new Gateway(sid, dateCreated, dateUpdated, friendlName, password, proxy, register, userAgent, timeToLive, uri);
+        return new Gateway(sid, dateCreated, dateUpdated,accountSid, friendlName, password, proxy, register, userAgent, timeToLive, uri);
     }
 
     private Map<String, Object> toMap(final Gateway gateway) {
         final Map<String, Object> map = new HashMap<String, Object>();
         map.put("sid", DaoUtils.writeSid(gateway.getSid()));
+        map.put("account_sid", DaoUtils.writeSid(gateway.getAccountSid()));
         map.put("date_created", DaoUtils.writeDateTime(gateway.getDateCreated()));
         map.put("date_updated", DaoUtils.writeDateTime(gateway.getDateUpdated()));
         map.put("friendly_name", gateway.getFriendlyName());
