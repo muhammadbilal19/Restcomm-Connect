@@ -84,10 +84,12 @@ public class GatewaysEndpoint extends SecuredEndpoint {
         final boolean register = Boolean.parseBoolean(data.getFirst("Register"));
         builder.setRegister(register);
         builder.setUserName(data.getFirst("UserName"));
+        if(data.getFirst("TTL")!=null){
         final int ttl = Integer.parseInt(data.getFirst("TTL"));
         builder.setTimeToLive(ttl);
+        }
         final StringBuilder buffer = new StringBuilder();
-        buffer.append("/").append(getApiVersion(data)).append("/Management/").append("Gateways/").append(sid.toString());
+        buffer.append("/").append(getApiVersion(data)).append("/Accounts/").append(accountSid.toString()).append("/Management/").append("Gateways/").append(sid.toString());
         builder.setUri(URI.create(buffer.toString()));
         return builder.build();
     }
@@ -117,7 +119,7 @@ public class GatewaysEndpoint extends SecuredEndpoint {
         checkAuthenticatedAccount();
         allowOnlySuperAdmin();
 //        secure(accountsDao.getAccount(accountSid), "RestComm:Read:Gateways");
-        final List<Gateway> gateways = dao.getGateways();
+        final List<Gateway> gateways = dao.getGateways(new Sid(accountSid));
         if (APPLICATION_XML_TYPE == responseType) {
             final RestCommResponse response = new RestCommResponse(new GatewayList(gateways));
             return ok(xstream.toXML(response), APPLICATION_XML).build();
@@ -138,7 +140,7 @@ public class GatewaysEndpoint extends SecuredEndpoint {
         } catch (final RuntimeException exception) {
             return status(BAD_REQUEST).entity(exception.getMessage()).build();
         }
-        final Gateway gateway = createFrom(data);
+        final Gateway gateway = createFrom(new Sid(accountSid),data);
         dao.addGateway(gateway);
         if (proxyManager == null) {
             proxyManager = (ActorRef) context.getAttribute("org.restcomm.connect.telephony.proxy.ProxyManager");

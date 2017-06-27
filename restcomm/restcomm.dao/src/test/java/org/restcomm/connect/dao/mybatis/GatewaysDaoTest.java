@@ -61,9 +61,11 @@ public final class GatewaysDaoTest {
     @Test
     public void createReadUpdateDelete() {
         final Sid sid = Sid.generate(Sid.Type.GATEWAY);
+        Sid accountSid = Sid.generate(Sid.Type.ACCOUNT);
         final URI uri = URI.create("hello-world.xml");
         final Gateway.Builder builder = Gateway.builder();
         builder.setSid(sid);
+        builder.setAccountSid(accountSid);
         builder.setFriendlyName("Service Provider");
         builder.setPassword("1234");
         builder.setProxy("sip:127.0.0.1:5080");
@@ -79,6 +81,7 @@ public final class GatewaysDaoTest {
         Gateway result = gateways.getGateway(sid);
         // Validate the results.
         assertTrue(result.getSid().equals(gateway.getSid()));
+        assertTrue(result.getAccountSid().equals(gateway.getAccountSid()));
         assertTrue(result.getFriendlyName().equals(gateway.getFriendlyName()));
         assertTrue(result.getPassword().equals(gateway.getPassword()));
         assertTrue(result.getProxy().equals(gateway.getProxy()));
@@ -109,6 +112,6 @@ public final class GatewaysDaoTest {
         gateways.removeGateway(sid);
         // Validate that the client was removed.
         assertTrue(gateways.getGateway(sid) == null);
-        assertTrue(gateways.getGateways().size() == 0);
+        assertTrue(gateways.getGateways(accountSid).size() == 0);
     }
 }

@@ -34,6 +34,8 @@ public interface GatewaysDao {
 
     List<Gateway> getGateways();
 
+    List<Gateway> getGateways(Sid accountSid);
+
     void removeGateway(Sid sid);
 
     void updateGateway(Gateway gateway);

@@ -94,7 +94,7 @@ public class GatewaysEndpointTest {
         
     }
 
-    @Deployment(name = "ClientsEndpointTest", managed = true, testable = false)
+    @Deployment(name = "GatewaysEndpointTest", managed = true, testable = false)
     public static WebArchive createWebArchiveNoGw() {
         WebArchive archive = ShrinkWrap.create(WebArchive.class, "restcomm.war");
         final WebArchive restcommArchive = ShrinkWrapMaven.resolver()
