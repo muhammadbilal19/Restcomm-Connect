@@ -133,7 +133,8 @@ public final class MybatisGatewaysDao implements GatewaysDao {
 
     private Gateway toGateway(final Map<String, Object> map) {
         final Sid sid = DaoUtils.readSid(map.get("sid"));
-        final Sid accountSid = DaoUtils.readSid(map.get("account_sid"));
+        String accSid = (String) map.get("account_sid");
+        final Sid accountSid = DaoUtils.readSid(accSid!=null && !"NULL".equals(accSid)?accSid:null);
         final DateTime dateCreated = DaoUtils.readDateTime(map.get("date_created"));
         final DateTime dateUpdated = DaoUtils.readDateTime(map.get("date_updated"));
         final String friendlName = DaoUtils.readString(map.get("friendly_name"));

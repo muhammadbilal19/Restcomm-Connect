@@ -119,7 +119,8 @@ public class GatewaysEndpoint extends SecuredEndpoint {
         checkAuthenticatedAccount();
         allowOnlySuperAdmin();
 //        secure(accountsDao.getAccount(accountSid), "RestComm:Read:Gateways");
-        final List<Gateway> gateways = dao.getGateways(new Sid(accountSid));
+        //final List<Gateway> gateways = dao.getGateways(new Sid(accountSid));
+        final List<Gateway> gateways = dao.getGateways();
         if (APPLICATION_XML_TYPE == responseType) {
             final RestCommResponse response = new RestCommResponse(new GatewayList(gateways));
             return ok(xstream.toXML(response), APPLICATION_XML).build();

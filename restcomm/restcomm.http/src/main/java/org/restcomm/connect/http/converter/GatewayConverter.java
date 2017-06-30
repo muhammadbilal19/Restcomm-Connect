@@ -52,7 +52,9 @@ public final class GatewayConverter extends AbstractConverter implements JsonSer
         final Gateway gateway = (Gateway) object;
         writer.startNode("Gateway");
         writeSid(gateway.getSid(), writer);
+        if(gateway.getAccountSid()!=null){
         writeAccountSid(gateway.getAccountSid(), writer);
+        }
         writeDateCreated(gateway.getDateCreated(), writer);
         writeDateUpdated(gateway.getDateUpdated(), writer);
         writeFriendlyName(gateway.getFriendlyName(), writer);
@@ -69,7 +71,9 @@ public final class GatewayConverter extends AbstractConverter implements JsonSer
     public JsonElement serialize(final Gateway gateway, final Type type, final JsonSerializationContext context) {
         final JsonObject object = new JsonObject();
         writeSid(gateway.getSid(), object);
+        if(gateway.getAccountSid()!=null){
         writeAccountSid(gateway.getAccountSid(), object);
+        }
         writeDateCreated(gateway.getDateCreated(), object);
         writeDateUpdated(gateway.getDateUpdated(), object);
         writeFriendlyName(gateway.getFriendlyName(), object);
