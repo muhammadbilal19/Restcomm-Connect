@@ -111,12 +111,12 @@ Step 3 - Download MariaDB Java Client Driver
 Step 5 - Edit the restcomm.xml file to point the DAO to mariadb
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* Edit the file **$RESTCOMM_HOME/standalone/deployments/restcomm.war/WEB-INF**/conf/restcomm.xml
+* Edit the file **$RESTCOMM_HOME/standalone/deployments/restcomm.war/WEB-INF**/conf/dao-manager.xml
 * Find the dao-manager tag and change the sql-files path to mariadb as shown below
 
 [source,lang:default,decode:true]
 ----
- <dao-manager class="org.mobicents.servlet.restcomm.dao.mybatis.MybatisDaoManager">
+ <dao-manager class="org.restcomm.connect.dao.mybatis.MybatisDaoManager">
         <configuration-file>${restcomm:home}/WEB-INF/conf/mybatis.xml
         </configuration-file>
         <data-files>${restcomm:home}/WEB-INF/data/hsql</data-files>

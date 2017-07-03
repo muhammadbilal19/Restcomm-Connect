@@ -2,11 +2,16 @@
 
 var rcMod = angular.module('rcApp');
 
-rcMod.controller('LogsNotificationsCtrl', function ($scope, $resource, $timeout, $modal, SessionService, RCommLogsNotifications) {
+rcMod.controller('LogsNotificationsCtrl', function ($scope, $resource, $timeout, $uibModal, SessionService, RCommLogsNotifications) {
 
   $scope.Math = window.Math;
 
   $scope.sid = SessionService.get("sid");
+  
+  // default search values
+  $scope.search = {
+    sub_accounts: false
+  }
 
   // pagination support ----------------------------------------------------------------------------------------------
 
@@ -21,8 +26,14 @@ rcMod.controller('LogsNotificationsCtrl', function ($scope, $resource, $timeout,
     $scope.noOfPages = Math.ceil($scope.filtered.length / $scope.entryLimit);
   };
 
+/*
   $scope.setPage = function(pageNo) {
     $scope.currentPage = pageNo;
+  };
+  */
+
+  $scope.pageChanged = function() {
+      $scope.getNotificationsLogsList($scope.currentPage-1);
   };
 
   $scope.filter = function() {
@@ -32,9 +43,20 @@ rcMod.controller('LogsNotificationsCtrl', function ($scope, $resource, $timeout,
     }, 10);
   };
 
+  // make sure no nulls remain in the 'query' filter.
+  $scope.$watchCollection("query", function (query, oldvalue) {
+    if (query) {
+        if (query.error_code === null)
+          delete query.error_code;
+        if (query.date_created === null)
+          delete query.date_created;
+    }
+    return query;
+  });
+
   // Modal : Notification Details
   $scope.showNotificationDetailsModal = function (notification) {
-    $modal.open({
+    $uibModal.open({
       controller: 'LogsNotificationsDetailsCtrl',
       scope: $scope,
       templateUrl: 'modules/modals/modal-logs-notifications.html',
@@ -47,10 +69,46 @@ rcMod.controller('LogsNotificationsCtrl', function ($scope, $resource, $timeout,
     });
   };
 
-  // initialize with a query
-  $scope.notificationsLogsList = RCommLogsNotifications.query({accountSid: $scope.sid}, function() {
-    $scope.noOfPages = Math.ceil($scope.notificationsLogsList.length / $scope.entryLimit);
-  });
+  $scope.getNotificationsLogsList = function(page) {
+    var params = $scope.search ? createSearchParams($scope.search) : {LocalOnly: true};
+    RCommLogsNotifications.search($.extend({accountSid: $scope.sid, Page: page, PageSize: $scope.entryLimit}, params), function(data) {
+      $scope.notificationsLogsList = data.notifications;
+      $scope.totalNotification = data.total;
+      $scope.noOfPages = data.num_pages;
+    });
+  }
+
+  var createSearchParams = function(search) {
+    var params = {};
+
+    // Mandatory fields
+    if(search.start_time) {
+      params["StartTime"] = search.start_time;
+    }
+    if(search.end_time) {
+      params["EndTime"] = search.end_time;
+    }
+    if(search.error_code) {
+      params["ErrorCode"] = search.error_code;
+    }
+    if(search.request_url) {
+      params["RequestUrl"] = search.request_url;
+    }
+    if(search.message_text) {
+      params["MessageText"] = search.message_text;
+    }
+
+    return params;
+  }
+
+//Activate click event for date buttons.
+ $scope.openDate = function(elemDate) {
+   if (elemDate === "startDate") {
+        angular.element('#startpicker').trigger('click');
+   }else{
+        angular.element('#endpicker').trigger('click');
+   }
+};
 
 $scope.sort = function(item) {
         if ($scope.predicate == 'date_created') {
@@ -68,15 +126,16 @@ $scope.sortBy = function(field) {
         }
     };
 
-
+  // initialize with a query
+  $scope.getNotificationsLogsList(0);
 });
 
-rcMod.controller('LogsNotificationsDetailsCtrl', function($scope, $stateParams, $resource, $modalInstance, SessionService, RCommLogsNotifications, notificationSid) {
+rcMod.controller('LogsNotificationsDetailsCtrl', function($scope, $stateParams, $resource, $uibModalInstance, SessionService, RCommLogsNotifications, notificationSid) {
   $scope.sid = SessionService.get("sid");
   $scope.notificationSid = $stateParams.notificationSid || notificationSid;
 
   $scope.closeNotificationDetails = function () {
-    $modalInstance.dismiss('cancel');
+    $uibModalInstance.dismiss('cancel');
   };
 
   $scope.notificationDetails = RCommLogsNotifications.view({accountSid: $scope.sid, notificationSid:$scope.notificationSid});

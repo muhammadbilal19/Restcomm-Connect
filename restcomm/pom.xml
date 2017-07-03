@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.telestax.servlet</groupId>
-  <artifactId>restcomm</artifactId>
-  <version>7.9.0-SNAPSHOT</version>
+	<parent>
+		<groupId>org.restcomm</groupId>
+		<artifactId>restcomm-parent</artifactId>
+		<version>3.0.4</version>
+	</parent>
+
+  <groupId>org.restcomm</groupId>
+  <artifactId>restcomm-connect</artifactId>
+  <version>8.2.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <name>RestComm</name>
+  <name>RestComm-Connect</name>
   <description>A unified communications platform for web developers.</description>
   <url>http://www.restcomm.org</url>
 
@@ -54,24 +60,25 @@
 	</licenses>
 
 	<scm>
-		<connection>scm:git:git@bitbucket.org:telestax/telscale-restcomm.git</connection>
-		<developerConnection>scm:git:git@bitbucket.org:telestax/telscale-restcomm.git</developerConnection>
-		<url>https://bitbucket.org/telestax/telscale-restcomm</url>
-		<tag>HEAD</tag>
+		<connection>scm:git:https://github.com/RestComm/Restcomm-Connect.git</connection>
+		<developerConnection>scm:git:git@github.com:RestComm/Restcomm-Connect.git</developerConnection>
+		<url>https://github.com/RestComm/Restcomm-Connect</url>
 	</scm>
 
 	<distributionManagement>
 		<repository>
-			<id>telscale-releases-repository</id>
-			<name>TelScale Releases Repository</name>
-			<url>http://telestax.artifactoryonline.com/telestax/releases</url>
+			<id>restcomm-releases-repository</id>
+			<name>Restcomm Releases Repository</name>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2
+			</url>
 		</repository>
 		<snapshotRepository>
-			<id>telscale-snapshots-repository</id>
-			<name>TelScale Snapshots Repository</name>
-			<url>http://telestax.artifactoryonline.com/telestax/snapshots</url>
+			<id>restcomm-snapshots-repository</id>
+			<name>Restcomm Snapshots Repository</name>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
 		</snapshotRepository>
 	</distributionManagement>
+
 	<properties>
 		<scala-lang.version>2.10.1</scala-lang.version>
 		<akka.version>2.1.2</akka.version>
@@ -80,11 +87,13 @@
 		<slf4j.version>1.5.5</slf4j.version>
 		<commons-configuration.version>1.7</commons-configuration.version>
 		<commons-io.version>2.4</commons-io.version>
+		<commons-codec.version>1.10</commons-codec.version>
+		<commons-lang.version>2.6</commons-lang.version>
 		<jain.mgcp.version>1.0</jain.mgcp.version>
-		<mobicents.mgcp.impl.version>3.0.2.FINAL</mobicents.mgcp.impl.version>
+		<mobicents.mgcp.impl.version>6.0.23</mobicents.mgcp.impl.version>
 		<javamail.version>1.4</javamail.version>
 		<servletapi.version>2.5</servletapi.version>
-    <sipservletapi.version>3.1.739</sipservletapi.version>
+    <sipservletapi.version>3.1.761</sipservletapi.version>
 		<staxapi.version>1.0.1</staxapi.version>
 		<staximpl.version>1.2.0</staximpl.version>
 		<servlet-api.version>7.0.50</servlet-api.version>
@@ -96,7 +105,7 @@
 		<xstream.version>1.4.2</xstream.version>
 		<mongodb.version>2.7.2</mongodb.version>
 		<mybatis.version>3.2.2</mybatis.version>
-		<jodatime.version>2.0</jodatime.version>
+		<jodatime.version>2.9.7</jodatime.version>
 		<libphonenumber.version>4.3</libphonenumber.version>
 		<junit.version>4.10</junit.version>
 		<scalatest.version>1.9.1</scalatest.version>
@@ -112,7 +121,7 @@
 		<mobicents.checkstyle.version>1.0.0.FINAL</mobicents.checkstyle.version>
 		<checkstyle.plugin.version>2.9.1</checkstyle.plugin.version>
 		<mgcpunit.version>1.0.0-ALPHA2</mgcpunit.version>
-		<aws.sdk.version>1.9.24</aws.sdk.version>
+		<aws.sdk.version>1.11.86</aws.sdk.version>
 		<!-- SMPP Testing -->
 		<ch.smpp.version>5.0.8</ch.smpp.version>
 		<ch-commons-util.version>6.0.2</ch-commons-util.version>
@@ -120,6 +129,9 @@
 		<ch-commons-charset.version>3.0.2</ch-commons-charset.version>
 		<netty.version>3.9.6.Final</netty.version>
 		<logback.version>1.1.3</logback.version>
+		<maven-artifact.version>3.1.0</maven-artifact.version>
+		<smpp-extensions.version>1.0.13</smpp-extensions.version>
+
 	</properties>
 	<modules>
 		<!-- <module>restcomm.docs</module> -->
@@ -148,16 +160,18 @@
 		<module>restcomm.tts.voicerss</module>
 		<module>restcomm.testsuite</module>
 		<module>restcomm.ui</module>
-		<module>restcomm.rvd</module>
 		<module>restcomm.tts.att</module>
 		<module>restcomm.ussd</module>
 		<module>restcomm.routing</module>
 		<module>restcomm.email</module>
 		<module>restcomm.email.api</module>
 		<module>restcomm.extension.api</module>
-		<module>restcomm.extension.traffic.throttling</module>
+		<module>restcomm.extension.controller</module>
 		<module>restcomm.identity</module>
-    <module>restcomm.monitoring.service</module>
+		<module>restcomm.mrb</module>
+                <module>restcomm.mrb.api</module>
+                <module>restcomm.monitoring.service</module>
+                <module>restcomm.tts.awspolly</module>
   </modules>
 
 	<dependencyManagement>
@@ -165,8 +179,8 @@
 			<!-- SMPP Testing -->
 
 			<dependency>
-				<groupId>com.telestax.servlet</groupId>
-				<artifactId>restcomm.sms.api</artifactId>
+				<groupId>org.restcomm</groupId>
+				<artifactId>restcomm-connect.sms.api</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
@@ -239,6 +253,18 @@
 				<groupId>commons-io</groupId>
 				<artifactId>commons-io</artifactId>
 				<version>${commons-io.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>commons-codec</groupId>
+				<artifactId>commons-codec</artifactId>
+				<version>${commons-codec.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>commons-lang</groupId>
+				<artifactId>commons-lang</artifactId>
+				<version>${commons-lang.version}</version>
 			</dependency>
 
 			<dependency>
@@ -487,6 +513,18 @@
 				<artifactId>aws-java-sdk-s3</artifactId>
 				<version>${aws.sdk.version}</version>
 			</dependency>
+
+			<dependency>
+				<groupId>org.apache.maven</groupId>
+				<artifactId>maven-artifact</artifactId>
+				<version>${maven-artifact.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.restcomm.smpp</groupId>
+				<artifactId>smpp-extensions</artifactId>
+				<version>${smpp-extensions.version}</version>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -554,12 +592,14 @@
 			<version>${hsqldb.version}</version>
 		</dependency>
 
+		<!--
 		<dependency>
 			<groupId>org.mobicents.arquillian.container</groupId>
 			<artifactId>mss-tomcat-embedded-7</artifactId>
 			<version>${mss.arquillian.version}</version>
 			<scope>test</scope>
 		</dependency>
+		-->
 
 		<dependency>
 			<groupId>org.jboss.arquillian.junit</groupId>
@@ -592,6 +632,18 @@
 			<groupId>org.mobicents</groupId>
 			<artifactId>checkstyle</artifactId>
 			<version>${mobicents.checkstyle.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-codec</groupId>
+			<artifactId>commons-codec</artifactId>
+			<version>${commons-codec.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+			<version>${commons-lang.version}</version>
 		</dependency>
 
 		<!--dependency> <groupId>att</groupId> <artifactId>naturalvoices</artifactId>

@@ -4,7 +4,7 @@ var rcMod = angular.module('rcApp');
 
 // Numbers : Incoming : List ---------------------------------------------------
 
-rcMod.controller('NumbersCtrl', function ($scope, $resource, $modal, $dialog, $rootScope, $anchorScroll, SessionService, RCommNumbers, Notifications) {
+rcMod.controller('NumbersCtrl', function ($scope, $resource, $uibModal, $dialog, $rootScope, $anchorScroll, SessionService, RCommNumbers, Notifications) {
   $anchorScroll(); // scroll to top
   $scope.sid = SessionService.get("sid");
 
@@ -28,7 +28,7 @@ rcMod.controller('NumbersCtrl', function ($scope, $resource, $modal, $dialog, $r
 /*
 // no modal is used for number registration any more
   $scope.showRegisterIncomingNumberModal = function () {
-    var registerIncomingNumberModal = $modal.open({
+    var registerIncomingNumberModal = $uibModal.open({
       controller: NumberDetailsCtrl,
       scope: $scope,
       templateUrl: 'modules/modals/modal-register-incoming-number.html'
@@ -51,35 +51,75 @@ rcMod.controller('NumbersCtrl', function ($scope, $resource, $modal, $dialog, $r
   $scope.confirmNumberDelete = function(phone) {
     confirmNumberDelete(phone, $dialog, $scope, RCommNumbers, Notifications);
   };
+  
+//pagination support ----------------------------------------------------------------------------------------------
 
-  $scope.numbersList = RCommNumbers.query({accountSid: $scope.sid});
+  $scope.currentPage = 1; //current page
+  $scope.maxSize = 5; //pagination max size
+  $scope.entryLimit = 10; //max rows for data table
+  $scope.noOfPages = 1; //max rows for data table
+  $scope.reverse = false;
+  $scope.predicate = "phone_number";
+
+  $scope.setEntryLimit = function(limit) {
+    $scope.entryLimit = limit;
+    $scope.currentPage = 1;
+    $scope.getNumbersList($scope.currentPage-1);
+  };
+
+  $scope.pageChanged = function() {
+    $scope.getNumbersList($scope.currentPage-1);
+  };
+
+  $scope.getNumbersList = function(page) {
+   var params = createSearchParams();
+    RCommNumbers.get($.extend({accountSid: $scope.sid, Page: page, PageSize: $scope.entryLimit}, params), function(data) {	
+      $scope.numbersList = data.incomingPhoneNumbers;
+      $scope.totalNumbers = data.total;
+      $scope.noOfPages = data.num_pages;
+      $scope.start = parseInt(data.start) + 1;
+      $scope.end = parseInt(data.end)
+      if($scope.end!=$scope.totalNumbers){
+    	  ++$scope.end;
+      }
+    });
+  }
+ var createSearchParams = function() {
+    var params = {};
+    params["SortBy"] = $scope.predicate;
+    params["Reverse"] = $scope.reverse;
+
+    return params;
+  }
+ 
+ $scope.sortBy = function(field) {
+     if ($scope.predicate != field) {
+         $scope.predicate = field;
+         $scope.reverse = false;
+     } else {
+         $scope.reverse = !$scope.reverse;
+     }
+ };
+ 
+  $scope.getNumbersList(0);
+
 });
 
 // Numbers : Incoming : Details (also used for Modal) --------------------------
 
-rcMod.controller('NumberDetailsCtrl', function ($scope, $stateParams, $location, $dialog, $modalInstance, SessionService, RCommNumbers, RCommApps, RCommAvailableNumbers, Notifications, allCountries, providerCountries, localApps, $rootScope, AuthService) {
+rcMod.controller('NumberDetailsCtrl', function ($scope, $stateParams, $location, $dialog, $uibModalInstance, SessionService, RCommNumbers, RCommApps, RCommAvailableNumbers, Notifications, allCountries, providerCountries, localApps, $rootScope, AuthService, Applications) {
 
-  // are we editing details...
-  //if($scope.phoneSid === $stateParams.phoneSid) {
+    // are we editing details...
+    //if($scope.phoneSid === $stateParams.phoneSid) {
 
     $scope.sid = SessionService.get("sid");
     $scope.phoneSid = $stateParams.phoneSid
 
     $scope.numberDetails = RCommNumbers.get({accountSid:$scope.sid, phoneSid: $scope.phoneSid});
 
-  //} // or registering a new one ?
-  //else {
-  //  // start optional items collapsed
-  //  $scope.isCollapsed = true;
-  //
-  //  $scope.closeRegisterIncomingNumber = function () {
-  //    $modalInstance.dismiss('cancel');
-  //  };
-  //}
-
-  // query for available apps
-  //$scope.availableApps = RCommApps.query({account:AuthService.getEmailAddress()});
-  $scope.localApps = localApps;
+    $scope.localVoiceApps = Applications.filterByKind(localApps, 'voice');
+    $scope.localSmsApps = Applications.filterByKind(localApps, 'sms');
+    $scope.localUssdApps = Applications.filterByKind(localApps, 'ussd');
 
   //$scope.countries = countries;
   $scope.countries = allCountries;
@@ -94,7 +134,7 @@ rcMod.controller('NumberDetailsCtrl', function ($scope, $stateParams, $location,
     RCommNumbers.register({accountSid: $scope.sid}, $.param(params),
       function() { // success
         Notifications.success('Number "' + number.phone_number + '" created successfully!');
-        $modalInstance.close();
+        $uibModalInstance.close();
       },
       function() { // error
         Notifications.error('Failed to register number "' + number.phone_number + '".');
@@ -147,7 +187,7 @@ rcMod.controller('NumberDetailsCtrl', function ($scope, $stateParams, $location,
   }
 });
 
-rcMod.controller('NumberRegisterCtrl', function ($scope, $stateParams, $location, $http, $dialog, $modalInstance, SessionService, RCommNumbers, RCommApps, RCommAvailableNumbers, Notifications, allCountries, providerCountries) {
+rcMod.controller('NumberRegisterCtrl', function ($scope, $stateParams, $location, $http, $dialog, SessionService, RCommNumbers, RCommApps, RCommAvailableNumbers, Notifications, allCountries, providerCountries) {
 
   $scope.sid = SessionService.get("sid");
 
@@ -172,6 +212,19 @@ rcMod.controller('NumberRegisterCtrl', function ($scope, $stateParams, $location
 
   $scope.searching = false;
   $scope.pageSize = 10;
+
+  $scope.$watchGroup(['numberCaps', 'numberCapsVoice', 'numberCapsSms'], function() {
+    var newNumberCaps = [];
+    if ($scope.numberCaps === 'specific') {
+      if ($scope.numberCapsVoice) {
+        newNumberCaps.push('Voice');
+      }
+      if ($scope.numberCapsSms) {
+        newNumberCaps.push('Sms');
+      }
+    }
+    $scope.newNumber.capabilities = newNumberCaps;
+  });
 
   $scope.findNumbers = function(pageNr) {
     $scope.searching = true;
@@ -321,6 +374,10 @@ var createNumberParams = function(number, isSIP) {
   params["UssdFallbackUrl"] = number.ussd_fallback_url;
   params["UssdFallbackMethod"] = number.ussd_fallback_method;
   params["UssdApplicationSid"] = number.ussd_application_sid;
+  params["ReferUrl"] = number.refer_url;
+  params["ReferMethod"] = number.refer_method;
+  params["ReferApplicationSid"] = number.refer_application_sid; // || number.referApplicationSid;
+
   if(isSIP) {
 	  params["isSIP"] = "true";
   }

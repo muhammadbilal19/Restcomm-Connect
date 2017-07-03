@@ -31,7 +31,9 @@ EOT
 
 listlog(){
     cat <<EOT >> $CLIFILE
-/subsystem=logging/logger=org.mobicents.servlet:read-resource
+/subsystem=logging/logger=org.mobicents.servlet.sip:read-resource
+/subsystem=logging/logger=org.mobicents.servlet.sip.restcomm:read-resource
+/subsystem=logging/logger=org.restcomm.connect:read-resource
 /subsystem=logging/logger=gov.nist:read-resource
 /subsystem=logging/console-handler=CONSOLE:read-resource
 /subsystem=logging/root-logger=ROOT:read-resource
@@ -49,12 +51,31 @@ for compt in $arr
   do
     case "$compt" in
             servlet)
-                COMPONENT=org.mobicents.servlet
+                COMPONENT=org.mobicents.servlet.sip
                 changelog $COMPONENT $2
                 ;;
 
             govnist)
                 COMPONENT=gov.nist
+                changelog $COMPONENT $2
+                ;;
+            siprestcomm)
+                COMPONENT=org.mobicents.servlet.sip.restcomm
+                changelog $COMPONENT $2
+                ;;
+            restcomm)
+                COMPONENT=org.restcomm.connect
+                changelog $COMPONENT $2
+                # update RVD's logging level too. TODO do this separately on 'rvd)' when docker scripts are updated too
+                COMPONENT=org.restcomm.connect.rvd.LOCAL
+                changelog $COMPONENT $2
+                COMPONENT=org.restcomm.connect.rvd.GLOBAL
+                changelog $COMPONENT $2
+                ;;
+             rvd)
+                COMPONENT=org.restcomm.connect.rvd.LOCAL
+                changelog $COMPONENT $2
+                COMPONENT=org.restcomm.connect.rvd.GLOBAL
                 changelog $COMPONENT $2
                 ;;
              root)
@@ -69,7 +90,7 @@ for compt in $arr
                 listlog
                 ;;
             *)
-                echo "Usage: $0 \"servlet govnist console root\" DEBUG. Can also set each element individually"
+                echo "Usage: $0 \"servlet govnist siprestcomm restscomm console root\" DEBUG. Can also set each element individually"
                 echo "Usage: $0 list (To list the actual log levels)"
                 exit 1
     esac

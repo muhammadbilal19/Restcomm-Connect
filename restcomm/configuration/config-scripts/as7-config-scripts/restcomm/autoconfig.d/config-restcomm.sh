@@ -52,15 +52,17 @@ configRestcomm() {
   		echo "HOSTNAME $RESTCOMM_HOSTNAME"
   		sed -i "s|<hostname>.*<\/hostname>|<hostname>${RESTCOMM_HOSTNAME}<\/hostname>|" $RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
 
+	if ! grep "${BIND_ADDRESS}.*${RESTCOMM_HOSTNAME}" /etc/hosts ; then
         if hash host 2>/dev/null; then
             if ! host ${RESTCOMM_HOSTNAME} > /dev/null
             then
                 echo "${BIND_ADDRESS}  ${RESTCOMM_HOSTNAME}" >> /etc/hosts
             fi
-        else
+       else
             echo "INFO: \"host\" programm does not exist ('dnsutils' package) please make sure that used hostname has a valid DNS resolution."
             echo "INFO:IF not add the necessary hostname Ip resolution at /etc/hosts file: e.g  echo RestC0mm_BIND_IP RESTCOMM_HOSTNAME >> /etc/hosts "
-        fi
+         fi
+fi
 	else
   		sed -i "s|<hostname>.*<\/hostname>|<hostname>${PUBLIC_IP}<\/hostname>|" $RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
  	fi
@@ -97,12 +99,8 @@ configVoipInnovations() {
 configDidProvisionManager() {
 	FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
 
-    #Check for port offset.
-    local SIP_PORT_UDP=$((SIP_PORT_UDP + PORT_OFFSET))
-
-
     if [[ "$PROVISION_PROVIDER" == "VI" || "$PROVISION_PROVIDER" == "vi" ]]; then
-        sed -e "s|phone-number-provisioning class=\".*\"|phone-number-provisioning class=\"org.mobicents.servlet.restcomm.provisioning.number.vi.VoIPInnovationsNumberProvisioningManager\"|" $FILE > $FILE.bak
+        sed -e "s|phone-number-provisioning class=\".*\"|phone-number-provisioning class=\"org.restcomm.connect.provisioning.number.vi.VoIPInnovationsNumberProvisioningManager\"|" $FILE > $FILE.bak
 
         sed -e "/<voip-innovations>/ {
             N; s|<login>.*</login>|<login>$1</login>|
@@ -113,7 +111,7 @@ configDidProvisionManager() {
         echo 'Configured Voip Innovation credentials'
     else
         if [[ "$PROVISION_PROVIDER" == "BW" || "$PROVISION_PROVIDER" == "bw" ]]; then
-        sed -e "s|phone-number-provisioning class=\".*\"|phone-number-provisioning class=\"org.mobicents.servlet.restcomm.provisioning.number.bandwidth.BandwidthNumberProvisioningManager\"|" $FILE > $FILE.bak
+        sed -e "s|phone-number-provisioning class=\".*\"|phone-number-provisioning class=\"org.restcomm.connect.provisioning.number.bandwidth.BandwidthNumberProvisioningManager\"|" $FILE > $FILE.bak
 
         sed -e "/<bandwidth>/ {
             N; s|<username>.*</username>|<username>$1</username>|
@@ -126,10 +124,10 @@ configDidProvisionManager() {
         else
             if [[ "$PROVISION_PROVIDER" == "NX" || "$PROVISION_PROVIDER" == "nx" ]]; then
                 echo "Nexmo PROVISION_PROVIDER"
-                sed -i "s|phone-number-provisioning class=\".*\"|phone-number-provisioning class=\"org.mobicents.servlet.restcomm.provisioning.number.nexmo.NexmoPhoneNumberProvisioningManager\"|" $FILE
+                sed -i "s|phone-number-provisioning class=\".*\"|phone-number-provisioning class=\"org.restcomm.connect.provisioning.number.nexmo.NexmoPhoneNumberProvisioningManager\"|" $FILE
 
                 sed -i "/<callback-urls>/ {
-                    N; s|<voice url=\".*\" method=\".*\" />|<voice url=\"$5:$SIP_PORT_UDP\" method=\"SIP\" />|
+                    N; s|<voice url=\".*\" method=\".*\" />|<voice url=\"$5:$8\" method=\"SIP\" />|
                     N; s|<sms url=\".*\" method=\".*\" />|<sms url=\"\" method=\"\" />|
                     N; s|<fax url=\".*\" method=\".*\" />|<fax url=\"\" method=\"\" />|
                     N; s|<ussd url=\".*\" method=\".*\" />|<ussd url=\"\" method=\"\" />|
@@ -147,13 +145,13 @@ configDidProvisionManager() {
             else
                 if [[ "$PROVISION_PROVIDER" == "VB" || "$PROVISION_PROVIDER" == "vb" ]]; then
                 echo "Voxbone PROVISION_PROVIDER"
-                sed -i "s|phone-number-provisioning class=\".*\"|phone-number-provisioning class=\"org.mobicents.servlet.restcomm.provisioning.number.voxbone.VoxbonePhoneNumberProvisioningManager\"|" $FILE
+                sed -i "s|phone-number-provisioning class=\".*\"|phone-number-provisioning class=\"org.restcomm.connect.provisioning.number.voxbone.VoxbonePhoneNumberProvisioningManager\"|" $FILE
 
                 sed -i "/<callback-urls>/ {
-                    N; s|<voice url=\".*\" method=\".*\" />|<voice url=\"\+\{E164\}\@$5:$SIP_PORT_UDP\" method=\"SIP\" />|
-                    N; s|<sms url=\".*\" method=\".*\" />|<sms url=\"\+\{E164\}\@$5:$SIP_PORT_UDP\" method=\"SIP\" />|
-                    N; s|<fax url=\".*\" method=\".*\" />|<fax url=\"\+\{E164\}\@$5:$SIP_PORT_UDP\" method=\"SIP\" />|
-                    N; s|<ussd url=\".*\" method=\".*\" />|<ussd url=\"\+\{E164\}\@$5:$SIP_PORT_UDP\" method=\"SIP\" />|
+                    N; s|<voice url=\".*\" method=\".*\" />|<voice url=\"\+\{E164\}\@$5:$8\" method=\"SIP\" />|
+                    N; s|<sms url=\".*\" method=\".*\" />|<sms url=\"\+\{E164\}\@$5:$8\" method=\"SIP\" />|
+                    N; s|<fax url=\".*\" method=\".*\" />|<fax url=\"\+\{E164\}\@$5:$8\" method=\"SIP\" />|
+                    N; s|<ussd url=\".*\" method=\".*\" />|<ussd url=\"\+\{E164\}\@$5:$8\" method=\"SIP\" />|
                 }" $FILE
 
                 sed -i "/<voxbone>/ {
@@ -201,21 +199,30 @@ configSmsAggregator() {
 ## Description: Configures Speech Recognizer
 ## Parameters : 1.iSpeech Key
 configSpeechRecognizer() {
-	FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
+    if [ -n "$ISPEECH_KEY" ]; then
+        FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
 
-	sed -e "/<speech-recognizer.*>/ {
-		N; s|<api-key.*></api-key>|<api-key production=\"true\">$1</api-key>|
-	}" $FILE > $FILE.bak
+        sed -e "/<speech-recognizer.*>/ {
+            N; s|<api-key.*></api-key>|<api-key production=\"true\">$1</api-key>|
+        }" $FILE > $FILE.bak
 
-	mv $FILE.bak $FILE
-	echo 'Configured the Speech Recognizer'
+        mv $FILE.bak $FILE
+        echo 'Configured the Speech Recognizer'
+    fi
 }
 
 ## Description: Configures available speech synthesizers
 ## Parameters : none
 configSpeechSynthesizers() {
-	configAcapela $ACAPELA_APPLICATION $ACAPELA_LOGIN $ACAPELA_PASSWORD
-	configVoiceRSS $VOICERSS_KEY
+	if [[ "$TTSSYSTEM" == "voicerss" ]]; then
+	    configVoiceRSS $VOICERSS_KEY
+
+	elif [[ "$TTSSYSTEM" == "awspolly" ]]; then
+		configAWSPolly $AWS_ACCESS_KEY $AWS_SECRET_KEY $AWS_REGION
+
+	else
+	    configAcapela $ACAPELA_APPLICATION $ACAPELA_LOGIN $ACAPELA_PASSWORD
+	 fi
 }
 
 ## Description: Configures Acapela Speech Synthesizer
@@ -223,35 +230,70 @@ configSpeechSynthesizers() {
 ## 				2.Login
 ## 				3.Password
 configAcapela() {
-	FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
+ if [[ -z $ACAPELA_APPLICATION || -z $ACAPELA_LOGIN || -z $ACAPELA_PASSWORD ]]; then
+        echo '!Please make sure that all necessary settings for acapela are set!'
+ else
+         FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
+         sed -i 's|<speech-synthesizer active=".*"/>|<speech-synthesizer active="acapela"/>|' $FILE
 
-	sed -e "/<speech-synthesizer class=\"org.mobicents.servlet.restcomm.tts.AcapelaSpeechSynthesizer\">/ {
-		N
-		N; s|<application>.*</application>|<application>$1</application>|
-		N; s|<login>.*</login>|<login>$2</login>|
-		N; s|<password>.*</password>|<password>$3</password>|
-	}" $FILE > $FILE.bak
+	        sed -e "/<acapela class=\"org.restcomm.connect.tts.acapela.AcapelaSpeechSynthesizer\">/ {
+		        N
+		        N; s|<application>.*</application>|<application>$1</application>|
+		        N; s|<login>.*</login>|<login>$2</login>|
+		        N; s|<password>.*</password>|<password>$3</password>|
+	        }" $FILE > $FILE.bak
 
-	mv $FILE.bak $FILE
-	echo 'Configured Acapela Speech Synthesizer'
+        mv $FILE.bak $FILE
+        echo 'Configured Acapela Speech Synthesizer'
+ fi
 }
+
 
 ## Description: Configures VoiceRSS Speech Synthesizer
 ## Parameters : 1.API key
 configVoiceRSS() {
-	FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
+    if [ -n "$VOICERSS_KEY" ]; then
+        FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
+         sed -i 's|<speech-synthesizer active=".*"/>|<speech-synthesizer active="voicerss"/>|' $FILE
 
-	sed -e "/<service-root>http:\/\/api.voicerss.org<\/service-root>/ {
-		N; s|<apikey>.*</apikey>|<apikey>$1</apikey>|
-	}" $FILE > $FILE.bak
+         sed -e "/<service-root>http:\/\/api.voicerss.org<\/service-root>/ {
+         N; s|<apikey>.*</apikey>|<apikey>$1</apikey>|
+         }" $FILE > $FILE.bak
 
-	mv $FILE.bak $FILE
-	echo 'Configured VoiceRSS Speech Synthesizer'
+         mv $FILE.bak $FILE
+         echo 'Configured VoiceRSS Speech Synthesizer'
+
+ 	else
+ 	     echo 'Please set KEY for VoiceRSS TTS'
+    fi
 }
 
-## Description: Updates Mobicents properties for RestComm
+## Description: Configures AWS Polly Speech Synthesizer
+## Parameters : 1.AWS Access Key
+## 				2.AWS Secret key
+## 				3.AWS Region
+configAWSPolly() {
+ if [[ -z $AWS_ACCESS_KEY || -z $AWS_SECRET_KEY || -z $AWS_REGION ]]; then
+        echo '!Please make sure that all necessary settings for AWS Polly are set!'
+ else
+         FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
+         sed -i 's|<speech-synthesizer active=".*"/>|<speech-synthesizer active="awspolly"/>|' $FILE
+
+	        sed -e "/<awspolly class=\"org.restcomm.connect.tts.awspolly.AWSPollySpeechSyntetizer\">/ {
+		        N
+		        N; s|<aws-access-key>.*</aws-access-key>|<aws-access-key>$1</aws-access-key>|
+		        N; s|<aws-secret-key>.*</aws-secret-key>|<aws-secret-key>$2</aws-secret-key>|
+		        N; s|<aws-region>.*</aws-region>|<aws-region>$3</aws-region>|
+	        }" $FILE > $FILE.bak
+
+        mv $FILE.bak $FILE
+        echo 'Configured AWS Polly Speech Synthesizer'
+ fi
+}
+
+## Description: Updates RestComm DARS properties for RestComm
 ## Parameters : none
-configMobicentsProperties() {
+configDARSProperties() {
 	FILE=$RESTCOMM_DARS/mobicents-dar.properties
 	sed -e 's|^ALL=.*|ALL=("RestComm", "DAR\:From", "NEUTRAL", "", "NO_ROUTE", "0")|' $FILE > $FILE.bak
 	mv $FILE.bak $FILE
@@ -302,24 +344,24 @@ configTelestaxProxy() {
 
 configMediaServerManager() {
 	FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
-	enabled="$1"
-	bind_address="$2"
+	bind_address="$1"
+	ms_address="$2"
 	ms_external_address="$3"
 
-	if [ "$enabled" == "true" ] || [ "$enabled" == "TRUE" ]; then
-		sed -e "/<mgcp-server class=\"org.mobicents.servlet.restcomm.mgcp.MediaGateway\">/ {
-			N
-			N; s|<local-address>.*</local-address>|<local-address>$bind_address</local-address>|
-			N; s|<local-port>.*</local-port>|<local-port>2727</local-port>|
-			N; s|<remote-address>127.0.0.1</remote-address>|<remote-address>$bind_address</remote-address>|
-			N; s|<remote-port>.*</remote-port>|<remote-port>2427</remote-port>|
-			N; s|<response-timeout>.*</response-timeout>|<response-timeout>500</response-timeout>|
-			N; s|<\!--.*<external-address>.*</external-address>.*-->|<external-address>$ms_external_address</external-address>|
-		}" $FILE > $FILE.bak
+	#Check for Por Offset
+    local LOCALMGCP=$((LOCALMGCP + PORT_OFFSET))
+    local REMOTEMGCP=$((REMOTEMGCP + PORT_OFFSET))
 
-		mv $FILE.bak $FILE
-		echo 'Configured Media Server Manager'
-	fi
+    sed -e "s|<local-address>.*</local-address>|<local-address>$bind_address</local-address>|" \
+        -e "s|<local-port>.*</local-port>|<local-port>$LOCALMGCP</local-port>|" \
+        -e "s|<remote-address>.*</remote-address>|<remote-address>$ms_address</remote-address>|" \
+        -e "s|<remote-port>.*</remote-port>|<remote-port>$REMOTEMGCP</remote-port>|" \
+        -e "s|<response-timeout>.*</response-timeout>|<response-timeout>$MGCP_RESPONSE_TIMEOUT</response-timeout>|" \
+        -e "s|<\!--.*<external-address>.*</external-address>.*-->|<external-address>$ms_external_address</external-address>|" \
+        -e "s|<external-address>.*</external-address>|<external-address>$ms_external_address</external-address>|" $FILE > $FILE.bak
+
+    mv $FILE.bak $FILE
+    echo 'Configured Media Server Manager'
 }
 
 ## Description: Configures SMPP Account Details
@@ -344,12 +386,12 @@ configSMPPAccount() {
 	destinationMap="$8"
 
 
-	sed -i "s|<smpp class=\"org.mobicents.servlet.restcomm.smpp.SmppService\" activateSmppConnection =\".*\">|<smpp class=\"org.mobicents.servlet.restcomm.smpp.SmppService\" activateSmppConnection =\"$activate\">|g" $FILE
+	sed -i "s|<smpp class=\"org.restcomm.connect.sms.smpp.SmppService\" activateSmppConnection =\".*\">|<smpp class=\"org.restcomm.connect.sms.smpp.SmppService\" activateSmppConnection =\"$activate\">|g" $FILE
 	#Add sourceMap && destinationMap
 
 
 	if [ "$activate" == "true" ] || [ "$activate" == "TRUE" ]; then
-		sed -e	"/<smpp class=\"org.mobicents.servlet.restcomm.smpp.SmppService\"/{
+		sed -e	"/<smpp class=\"org.restcomm.connect.sms.smpp.SmppService\"/{
 			N
 			N
 			N
@@ -369,7 +411,7 @@ configSMPPAccount() {
 		echo 'Configured SMPP Account Details'
 
 	else
-		sed -e	"/<smpp class=\"org.mobicents.servlet.restcomm.smpp.SmppService\"/{
+		sed -e	"/<smpp class=\"org.restcomm.connect.sms.smpp.SmppService\"/{
 			N
 			N
 			N
@@ -468,13 +510,32 @@ otherRestCommConf(){
 
 	if [ -n "$HSQL_DIR" ]; then
   		echo "HSQL_DIR $HSQL_DIR"
-  		FILE=$HSQL_DIR/restcomm.script
-  		mkdir -p $HSQL_DIR
-  		if [ ! -f $FILE ]; then
-  		    sed -i "s|<data-files>.*</data-files>|<data-files>${HSQL_DIR}</data-files>|"  $FILE
+  		FILEDB=$HSQL_DIR/restcomm.script
+  		sed -i "s|<data-files>.*</data-files>|<data-files>${HSQL_DIR}</data-files>|"  $FILE
+  		if [ ! -f $FILEDB ]; then
+  		    mkdir -p $HSQL_DIR
   		    cp $RESTCOMM_DEPLOY/WEB-INF/data/hsql/* $HSQL_DIR
         fi
 	fi
+
+	if [ -n "$USSDGATEWAYURI" ]; then
+  		echo "USSD GATEWAY configuration"
+  		FILE=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
+         sed -e "s|<ussd-gateway-uri>.*</ussd-gateway-uri>|<ussd-gateway-uri>$USSDGATEWAYURI</ussd-gateway-uri>|" \
+             -e "s|<ussd-gateway-user>.*</ussd-gateway-user>|<ussd-gateway-user>$USSDGATEWAYUSER</ussd-gateway-user>|" \
+             -e "s|<ussd-gateway-password>.*</ussd-gateway-password>|<ussd-gateway-password>$USSDGATEWAYPASSWORD</ussd-gateway-password>|" $FILE > $FILE.bak
+          mv $FILE.bak $FILE
+	fi
+
+	echo "HTTP_RESPONSE_TIMEOUT $HTTP_RESPONSE_TIMEOUT"
+	sed -e "/<http-client>/ {
+			N
+			N; s|<response-timeout>.*</response-timeout>|<response-timeout>$HTTP_RESPONSE_TIMEOUT</response-timeout>|
+		}" $FILE > $FILE.bak
+    mv $FILE.bak $FILE
+
+    echo "CACHE_NO_WAV $CACHE_NO_WAV"
+    sed -i "s|<cache-no-wav>.*</cache-no-wav>|<cache-no-wav>${CACHE_NO_WAV}</cache-no-wav>|" $FILE
 
     echo "End Rest RestComm configuration"
 }
@@ -499,25 +560,85 @@ confRVD(){
 	fi
 }
 
+## Adds/removes <rcmlserver>/<base-url> element based on $RVD_URL
+## This version of confRcmlserver() will used xmlstarlet and will probably sed commands that rely on empty elements like <x></x> instead of <x/>
+#confRcmlserver(){
+#    echo "Configuring <rcmlserver/>..."
+#    local RESTCOMM_XML=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
+#    if [ -z "$RVD_URL" ]; then
+#        # remove <rcmlserver>/<base-url> element altogether
+#        xmlstarlet ed -P -d "/restcomm/rcmlserver/base-url" "$RESTCOMM_XML" > "${RESTCOMM_XML}.bak"
+#        mv ${RESTCOMM_XML}.bak "$RESTCOMM_XML"
+#    else
+#        # remove existing <base-url/> element
+#        xmlstarlet ed -P -d /restcomm/rcmlserver/base-url "$RESTCOMM_XML" > "${RESTCOMM_XML}.bak"
+#        mv ${RESTCOMM_XML}.bak "$RESTCOMM_XML"
+#        # add it anew
+#        xmlstarlet ed -P -s /restcomm/rcmlserver -t elem -n base-url -v "$RVD_URL" "${RESTCOMM_XML}" > "${RESTCOMM_XML}.bak"
+#        mv "${RESTCOMM_XML}.bak" "$RESTCOMM_XML"
+#    fi
+#    echo "<rcmlserver/> configured"
+#}
+
+# Updates <rcmlserver>/<base-url> according to $RVD_URL
+# This version of confRcmlserver() used sed for backwards compatibility with existing sed commands in this
+confRcmlserver() {
+    echo "Configuring <rcmlserver/>..."
+    local RESTCOMM_XML=$RESTCOMM_DEPLOY/WEB-INF/conf/restcomm.xml
+    sed  "/<rcmlserver>/,/<\/rcmlserver>/ s|<base-url>.*</base-url>|<base-url>${RVD_URL}</base-url>|" "$RESTCOMM_XML" > "${RESTCOMM_XML}.bak"
+    mv ${RESTCOMM_XML}.bak "$RESTCOMM_XML"
+    echo "base-url set to '$RVD_URL'"
+    echo "<rcmlserver/> configured"
+}
+
+
+#Auto Configure RMS Networking, if  MANUAL_SETUP=false.
+configRMSNetworking() {
+    if [[ "$MANUAL_SETUP" == "false" || "$MANUAL_SETUP" == "FALSE" ]]; then
+        sed -i "s|BIND_ADDRESS=.*|BIND_ADDRESS=${BIND_ADDRESS}|" $RESTCOMM_BIN/restcomm/mediaserver.conf
+        sed -i "s|MGCP_ADDRESS=.*|MGCP_ADDRESS=${BIND_ADDRESS}|" $RESTCOMM_BIN/restcomm/mediaserver.conf
+        sed -i "s|NETWORK=.*|NETWORK=${BIND_NETWORK}|" $RESTCOMM_BIN/restcomm/mediaserver.conf
+        sed -i "s|SUBNET=.*|SUBNET=${BIND_SUBNET_MASK}|" $RESTCOMM_BIN/restcomm/mediaserver.conf
+    fi
+}
 
 # MAIN
 echo 'Configuring RestComm...'
 configRCJavaOpts
-configMobicentsProperties
+configDARSProperties
 configRestcomm "$PUBLIC_IP"
 #configVoipInnovations "$VI_LOGIN" "$VI_PASSWORD" "$VI_ENDPOINT"
-configDidProvisionManager "$DID_LOGIN" "$DID_PASSWORD" "$DID_ENDPOINT" "$DID_SITEID" "$PUBLIC_IP" "$DID_ACCOUNTID" "$SMPP_SYSTEM_TYPE"
+
+if [ "$ACTIVATE_LB" == "true" ] || [ "$ACTIVATE_LB" == "TRUE" ]; then
+    HOSTFORDID=$LBHOST
+    PORTFORDID=$LB_EXTERNAL_PORT_UDP
+
+else
+    PORTFORDID=$SIP_PORT_UDP
+    HOSTFORDID=$PUBLIC_IP
+
+    #Check for port offset.
+    PORTFORDID=$((PORTFORDID + PORT_OFFSET))
+fi
+
+if [ -z "$MS_ADDRESS" ]; then
+		MS_ADDRESS=$BIND_ADDRESS
+fi
+
+configDidProvisionManager "$DID_LOGIN" "$DID_PASSWORD" "$DID_ENDPOINT" "$DID_SITEID" "$HOSTFORDID" "$DID_ACCOUNTID" "$SMPP_SYSTEM_TYPE" "$PORTFORDID"
 configFaxService "$INTERFAX_USER" "$INTERFAX_PASSWORD"
 configSmsAggregator "$SMS_OUTBOUND_PROXY" "$SMS_PREFIX"
 configSpeechRecognizer "$ISPEECH_KEY"
 configSpeechSynthesizers
 configTelestaxProxy "$ACTIVE_PROXY" "$TP_LOGIN" "$TP_PASSWORD" "$INSTANCE_ID" "$PROXY_IP" "$SITE_ID"
-configMediaServerManager "$ACTIVE_PROXY" "$BIND_ADDRESS" "$MEDIASERVER_EXTERNAL_ADDRESS"
+configMediaServerManager "$BIND_ADDRESS" "$MS_ADDRESS" "$MEDIASERVER_EXTERNAL_ADDRESS"
 configSMPPAccount "$SMPP_ACTIVATE" "$SMPP_SYSTEM_ID" "$SMPP_PASSWORD" "$SMPP_SYSTEM_TYPE" "$SMPP_PEER_IP" "$SMPP_PEER_PORT" "$SMPP_SOURCE_MAP" "$SMPP_DEST_MAP"
 configRestCommURIs
 updateRecordingsPath
 configHypertextPort
 configOutboundProxy
 otherRestCommConf
+confRcmlserver
 confRVD
+configRMSNetworking
 echo 'Configured RestComm!'

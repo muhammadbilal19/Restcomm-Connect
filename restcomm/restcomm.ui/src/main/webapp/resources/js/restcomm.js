@@ -9,7 +9,6 @@ var rcMod = angular.module('rcApp', [
   'angular-md5',
   'ui.bootstrap.modal.dialog',
 //  'loadingOnAJAX',
-  'ui.bootstrap.modal.dialog',
   'angularFileUpload',
   'ngPasswordStrength',
   'nvd3',
@@ -117,12 +116,17 @@ rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $u
     templateUrl:'modules/profile.html',
     controller:'ProfileCtrl'
   });
+  $stateProvider.state('restcomm.subaccounts',{
+	    url:'/subaccounts',
+	    templateUrl:'modules/subaccounts.html',
+	    controller:'SubAccountsCtrl'
+	  });
   $stateProvider.state('restcomm.register-incoming',{
     url:'/numbers/register-incoming',
     templateUrl:'modules/numbers-incoming-register.html',
     controller:'NumberRegisterCtrl',
     resolve: {
-        $modalInstance : function() { return undefined; },
+        $uibModalInstance : function() { return undefined; },
         allCountries : function(RCommAvailableNumbers) { return RCommAvailableNumbers.getCountries().$promise; },
         providerCountries: function(RCommAvailableNumbers, AuthService, authorize) { return RCommAvailableNumbers.getAvailableCountries({accountSid:AuthService.getAccountSid()}).$promise; }
     }
@@ -132,7 +136,7 @@ rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $u
     templateUrl:'modules/numbers-incoming-details.html',
     controller:'NumberDetailsCtrl',
     resolve: {
-        $modalInstance : function() {return undefined;},
+        $uibModalInstance : function() {return undefined;},
         allCountries : function() {return undefined;},
         providerCountries : function() {return undefined;},
         localApps: function (rappService, authorize) { return rappService.refreshLocalApps();}
@@ -148,7 +152,7 @@ rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $u
     templateUrl: 'modules/numbers-clients-details.html',
     controller: 'ClientDetailsCtrl',
     resolve: {
-        $modalInstance : function() {return undefined;},
+        $uibModalInstance : function() {return undefined;},
         localApps: function (rappService,authorize) { return rappService.refreshLocalApps();}
     }
   });
@@ -178,7 +182,7 @@ rcMod.config(['$stateProvider','$urlRouterProvider', function($stateProvider, $u
     templateUrl: 'modules/logs-calls-details.html',
     controller: 'LogsCallsDetailsCtrl',
     resolve: {
-        $modalInstance : function() {return undefined;},
+        $uibModalInstance : function() {return undefined;},
         callSid: function() {}
     }
   });

@@ -17,6 +17,7 @@ There is two different ways to install Restcomm Connect. Either through Docker o
 * <<docker/Restcomm - Docker Adding a Jar File to an Existing Container.adoc#docker-jar,Restcomm Connect Docker Adding a Jar File to an Existing Container>>
 * <<docker/Restcomm - Docker How to Load Environment Variable from a File.adoc#docker-certificate,Restcomm Connect Docker How to Load Environment Variable from a File>>
 * <<docker/Restcomm - Docker How to Persist Your Work on a Filesystem.adoc#docker-persist,Restcomm Connect Docker How to Persist Your Work on a Filesystem>>
+* <<docker/Restcomm - Docker Getting started with Telestax RestComm and XMS.adoc#restcomm-docker,Restcomm Connect Docker Integration with PowerMedia XMS>>
 
 === Binary Installation and Start
 
@@ -49,12 +50,15 @@ There is two different ways to install Restcomm Connect. Either through Docker o
 
 === Media
 
-* <<Restcomm - Working with RestComm and Dialogic XMS.adoc#google-cloud,Integrate RestComm-Connect with Dialogic XMS Media Server>>
+* <<Restcomm - Working with RestComm and Dialogic XMS.adoc#google-cloud,Working with RestComm-Connect and Dialogic XMS Media Server>>
+* <<Restcomm - Integration with Dialogic XMS.adoc#google-cloud,Integrating RestComm-Connect with Dialogic XMS Media Server>>
+
 * <<Restcomm - How to Add G729 Codec to the Media Server.adoc#g729,How to Add G729 Codec to the Media Server>>
 
-=== Security 
+=== Security
 
 * <<Restcomm - Enable HTTPS secure connector on JBoss AS 7 or EAP 6.adoc#secure,Enable HTTPS secure connector on JBoss AS 7 or EAP 6>>
+* <<Restcomm - Enable password reset URL.adoc,Enable password reset URL on Dashboard login>>
 
 === SMS
 
@@ -65,6 +69,15 @@ There is two different ways to install Restcomm Connect. Either through Docker o
 * <<ha/Restcomm - Configuring Load-balancer.adoc#load-balancer,Configuring Load-balancer>>
 * <<ha/Restcomm - Using a Single Mysql Database for 2 Restcomm Servers.adoc#mysql,Using a Single Mysql Database for 2 Restcomm Connect Servers>>
 * <<ha/Restcomm - Single RVD Workspace for two Restcomm Instances.adoc#rvd,Single RVD Workspace for two Restcomm Instances>>
+
+=== IMS GW - B2BUA
+
+* <<ims_b2bua/Restcomm_IMS_GW.adoc#intro,Restcomm-Connect as a WebRTC GW to IMS >>
+* <<ims_b2bua/Restcomm_ActAsProxy.adoc#intro, Restcomm-Connect acting as a generic Proxy>>
+
+=== Amazon S3 Integration
+
+* <<s3/Restcomm_S3.adoc#intro,Restcomm Amazon S3 Integration>>
 
 == Contributor Resources
 

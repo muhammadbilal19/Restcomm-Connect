@@ -18,8 +18,12 @@ NoSslRestConf(){
 	sed -e "s/<connector name=\"https\" \(.*\)>/<\!--connector name=\"https\" \1>/" \
 	-e "s/<\/connector>/<\/connector-->/" $FILE > $FILE.bak
 	mv $FILE.bak $FILE
-	sed -e "s/<\!--connector name=\"http\" \(.*\)-->/<connector name=\"http\" \1\/>/" $FILE > $FILE.bak
+	sed -e "s/<.*connector name=\"http\".*>/<connector name=\"http\" protocol=\"HTTP\/1.1\" scheme=\"http\" socket-binding=\"http\"\/> /" $FILE > $FILE.bak
 	mv $FILE.bak $FILE
+
+    sed -i "s|SSL_ENABLED=.*|SSL_ENABLED=false|" $RESTCOMM_BIN/restcomm/mediaserver.conf
+    sed -i "s|SSL_KEYSTORE=.*|SSL_KEYSTORE=restcomm.jks|" $RESTCOMM_BIN/restcomm/mediaserver.conf
+    sed -i "s|SSL_PASSWORD=.*|SSL_PASSWORD=changeme|" $RESTCOMM_BIN/restcomm/mediaserver.conf
 }
 
 ####funcitions for SECURESSL="SELF" || SECURESSL="AUTH" ####
@@ -28,14 +32,57 @@ NoSslRestConf(){
 SslRestCommConf(){
 	FILE=$RESTCOMM_CONF/standalone-sip.xml
 	echo "Will properly configure HTTPS Connector ";
+	  FILERESTCOMMXML=$BASEDIR/standalone/deployments/restcomm.war/WEB-INF/web.xml
+      FILEMANAGERXML=$BASEDIR/standalone/deployments/restcomm-management.war/WEB-INF/web.xml
+      FILERVDXML=$BASEDIR/standalone/deployments/restcomm-rvd.war/WEB-INF/web.xml
+      FILEOLYMPUSXML=$BASEDIR/standalone/deployments/olympus.war/WEB-INF/web.xml
 	#Disable HTTP if set to true.
 	if [[ "$DISABLE_HTTP" == "true" || "$DISABLE_HTTP" == "TRUE" ]]; then
 		echo "DISABLE_HTTP is '$DISABLE_HTTP'. Will disable HTTP Connector"
-		sed -e "s/<connector name=\"http\" \(.*\)\/>/<\!--connector name=\"http\" \1-->/" $FILE > $FILE.bak
+		sed -e "s/<.*connector name=\"http\".*>/<\!--connector name=\"http\" protocol=\"HTTP\/1.1\" scheme=\"http\" socket-binding=\"http\"-->/" $FILE > $FILE.bak
 		mv $FILE.bak $FILE
+
+		grep -q '<security-constraint>' $FILERESTCOMMXML &&  sed -e "s/<security-constraint>/<!--security-constraint>/"  $FILERESTCOMMXML > $FILERESTCOMMXML.bak \
+        &&  sed -e "s/<\/security-constraint>/<\/security-constraint-->/"  $FILERESTCOMMXML.bak > $FILERESTCOMMXML
+        grep -qs '<security-constraint>' $FILEMANAGERXML && sed -e "s/<security-constraint>/<!--security-constraint>/"  $FILEMANAGERXML > $FILEMANAGERXML.bak \
+        && sed -e "s/<\/security-constraint>/<\/security-constraint-->/"  $FILEMANAGERXML.bak > $FILEMANAGERXML
+        grep -q '<security-constraint>' $FILERVDXML && sed -e "s/<security-constraint>/<!--security-constraint>/"  $FILERVDXML > $FILERVDXML.bak \
+        && sed -e "s/<\/security-constraint>/<\/security-constraint-->/"  $FILERVDXML.bak > $FILERVDXML
+        grep -q '<security-constraint>' $FILEOLYMPUSXML && sed -e "s/<security-constraint>/<!--security-constraint>/"  $FILEOLYMPUSXML > $FILEOLYMPUSXML.bak \
+        && sed -e "s/<\/security-constraint>/<\/security-constraint-->/"  $FILEOLYMPUSXML.bak > $FILEOLYMPUSXML
+
+	elif [[ "$DISABLE_HTTP" == "REDIRECT" || "$DISABLE_HTTP" == "redirect" ]]; then
+	    sed -e "s/<.*connector name=\"http\".*>/<connector name=\"http\" protocol=\"HTTP\/1.1\" scheme=\"http\" socket-binding=\"http\" redirect-port=\"$HTTPS_PORT\" \/>/" $FILE > $FILE.bak
+	    mv $FILE.bak $FILE
+	    if [ ! -d "$BASEDIR/standalone/deployments/restcomm-management.war" ]; then
+            mkdir $BASEDIR/standalone/deployments/restcomm-management-exploded.war
+            unzip -q $BASEDIR/standalone/deployments/restcomm-management.war -d $BASEDIR/standalone/deployments/restcomm-management-exploded.war/
+            rm -f $BASEDIR/standalone/deployments/restcomm-management.war
+            mv -f $BASEDIR/standalone/deployments/restcomm-management-exploded.war $BASEDIR/standalone/deployments/restcomm-management.war
+        fi
+
+        sed -e "s/<!--security-constraint>/<security-constraint>/"  $FILERESTCOMMXML > $FILERESTCOMMXML.bak
+        sed -e "s/<\/security-constraint-->/<\/security-constraint>/"  $FILERESTCOMMXML.bak > $FILERESTCOMMXML
+        sed -e "s/<!--security-constraint>/<security-constraint>/"  $FILEMANAGERXML > $FILEMANAGERXML.bak
+        sed -e "s/<\/security-constraint-->/<\/security-constraint>/"  $FILEMANAGERXML.bak > $FILEMANAGERXML
+        sed -e "s/<!--security-constraint>/<security-constraint>/"  $FILERVDXML > $FILERVDXML.bak
+        sed -e "s/<\/security-constraint-->/<\/security-constraint>/"  $FILERVDXML.bak > $FILERVDXML
+        sed -e "s/<!--security-constraint>/<security-constraint>/"  $FILEOLYMPUSXML > $FILEOLYMPUSXML.bak
+        sed -e "s/<\/security-constraint-->/<\/security-constraint>/"  $FILEOLYMPUSXML.bak > $FILEOLYMPUSXML
+
 	else
-		sed -e "s/<\!--connector name=\"http\" \(.*\)-->/<connector name=\"http\" \1\/>/" $FILE > $FILE.bak
-		mv $FILE.bak $FILE
+        sed -e "s/<.*connector name=\"http\".*>/<connector name=\"http\" protocol=\"HTTP\/1.1\" scheme=\"http\" socket-binding=\"http\"\/>    /" $FILE > $FILE.bak
+        mv $FILE.bak $FILE
+
+        grep -q '<security-constraint>' $FILERESTCOMMXML &&  sed -e "s/<security-constraint>/<!--security-constraint>/"  $FILERESTCOMMXML > $FILERESTCOMMXML.bak \
+        &&  sed -e "s/<\/security-constraint>/<\/security-constraint-->/"  $FILERESTCOMMXML.bak > $FILERESTCOMMXML
+        grep -qs '<security-constraint>' $FILEMANAGERXML && sed -e "s/<security-constraint>/<!--security-constraint>/"  $FILEMANAGERXML > $FILEMANAGERXML.bak \
+        && sed -e "s/<\/security-constraint>/<\/security-constraint-->/"  $FILEMANAGERXML.bak > $FILEMANAGERXML
+        grep -q '<security-constraint>' $FILERVDXML && sed -e "s/<security-constraint>/<!--security-constraint>/"  $FILERVDXML > $FILERVDXML.bak \
+        && sed -e "s/<\/security-constraint>/<\/security-constraint-->/"  $FILERVDXML.bak > $FILERVDXML
+        grep -q '<security-constraint>' $FILEOLYMPUSXML && sed -e "s/<security-constraint>/<!--security-constraint>/"  $FILEOLYMPUSXML > $FILEOLYMPUSXML.bak \
+        && sed -e "s/<\/security-constraint>/<\/security-constraint-->/"  $FILEOLYMPUSXML.bak > $FILEOLYMPUSXML
+
 	fi
 	#If File contains path, or just the name.
 	if [[ "$TRUSTSTORE_FILE" = /* ]]; then
@@ -52,22 +99,6 @@ SslRestCommConf(){
 	echo "Properly configured HTTPS Connector to use trustStore file $CERTIFICATION_FILE"
 }
 
-#SSL configuration for RMS. Use certificate at JAVA_OPTS.
-SslRmsConf(){
-	echo "TRUSTSTORE_PASSWORD is set to '$TRUSTSTORE_PASSWORD' will properly configure MMS";
-	FILE=$MMS_HOME/bin/run.sh
-	if [[ "$TRUSTSTORE_FILE" = /* ]]; then
-		CERTIFICATION_FILE=$TRUSTSTORE_FILE
-	else
-		CERTIFICATION_FILE=$RESTCOMM_HOME/standalone/configuration/$TRUSTSTORE_FILE
-	fi
-	JAVA_OPTS_TRUSTORE="-Djavax.net.ssl.trustStore=$CERTIFICATION_FILE -Djavax.net.ssl.trustStorePassword=$TRUSTSTORE_PASSWORD"
-	sed -e "/# Setup MMS specific properties/ {
-	  N; s|JAVA_OPTS=.*|JAVA_OPTS=\"-Dprogram\.name=\\\$PROGNAME $RMS_JAVA_OPTS $JAVA_OPTS_TRUSTORE\"|
-	}" $FILE > $FILE.bak
-	mv $FILE.bak $FILE
-	echo "Properly configured MMS to use trustStore file $RESTCOMM_HOME/standalone/configuration/$TRUSTSTORE_FILE"
-}
 #If self-sighned create certificate.
 #else use authorized.
 CertConfigure(){
@@ -134,6 +165,24 @@ MssStackConf(){
     \javax.net.ssl.keyStoreType=JKS' $RESTCOMM_CONF/mss-sip-stack.properties
 }
 
+
+#SIP-Servlets configuration for HTTPS.
+#For both Self-signed and Authorized certificate.
+SslRMSConf(){
+    if [[ "$MANUAL_SETUP" == "false" || "$MANUAL_SETUP" == "FALSE" ]]; then
+
+    	if [[ "$TRUSTSTORE_FILE" = /* ]]; then
+		    CERTIFICATION_FILE=$TRUSTSTORE_FILE
+	    else
+		    CERTIFICATION_FILE="$RESTCOMM_CONF/$TRUSTSTORE_FILE"
+	    fi
+
+        sed -i "s|SSL_ENABLED=.*|SSL_ENABLED=true|" $RESTCOMM_BIN/restcomm/mediaserver.conf
+        sed -i "s|SSL_KEYSTORE=.*|SSL_KEYSTORE=${CERTIFICATION_FILE}|" $RESTCOMM_BIN/restcomm/mediaserver.conf
+        sed -i "s|SSL_PASSWORD=.*|SSL_PASSWORD=${TRUSTSTORE_PASSWORD}|" $RESTCOMM_BIN/restcomm/mediaserver.conf
+    fi
+}
+
 # MAIN
 echo 'RestComm SSL Configuring ...'
 
@@ -143,9 +192,9 @@ if [[ "$SECURESSL" = "SELF" ||  "$SECURESSL" = "AUTH" ]]; then
 	else
   		echo "SECURE $SECURESSL"
 		SslRestCommConf
-		SslRmsConf
 		CertConfigure
 		MssStackConf
+		SslRMSConf
 	fi
 elif [[ "$SECURESSL" == "false" || "$SECURESSL" == "FALSE" ]]; then
 	NoSslRestConf

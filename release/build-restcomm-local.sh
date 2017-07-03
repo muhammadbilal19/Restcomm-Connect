@@ -6,7 +6,7 @@ mkdir $WORKSPACE
 cp -ar ../* $WORKSPACE
 
 CURRENT_BRANCH=`git rev-parse --abbrev-ref HEAD`
-export MAJOR_VERSION_NUMBER=7.8.0
+export MAJOR_VERSION_NUMBER=8.0.0
 export RESTCOMM_BRANCH=$CURRENT_BRANCH
 export RUN_TESTSUITE=false
 export BUILD_NUMBER=$RESTCOMM_BRANCH-local
@@ -20,7 +20,7 @@ echo "RUN TESTSUITE: $RUN_TESTSUITE"
 
 export DEPENDENCIES_HOME=$WORKSPACE/dependencies
 mkdir $DEPENDENCIES_HOME
-export RESTCOMM_HOME=$WORKSPACE
+export RESTCOMM_HOME=$WORKSPACE/Restcomm-Connect
 mkdir $RESTCOMM_HOME/restcomm
 export RELEASE=$RESTCOMM_HOME/release
 cd $RESTCOMM_HOME/restcomm
@@ -49,7 +49,6 @@ else
 echo "Will not run test suite because variable is $RUN_TESTSUITE"
 fi
 
-#git push --repo https://telscalejenkins:m0b1c3nts@bitbucket.org/telestax/telscale-restcomm.git origin restcomm-release-$MAJOR_VERSION_NUMBER.$BUILD_NUMBER
 echo "$MAJOR_VERSION_NUMBER.$BUILD_NUMBER" > $WORKSPACE/restcomm-version.txt
 ls -la $WORKSPACE/*.zip
 md5sum $WORKSPACE/*.zip

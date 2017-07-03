@@ -218,9 +218,9 @@ rcServices.factory('AuthService',function(RCommAccounts,$http, $location, Sessio
     // Call it when authenticated and in Restcomm auth mode
     function updatePassword(newPassword) {
         var deferred = $q.defer();
-        var apiPath = "/restcomm/2012-04-24/Accounts/" + account.sid + ".json";
+        var apiPath = "/restcomm/2012-04-24/Accounts.json/" + account.sid;
         var auth_header = basicAuthHeader(account.sid, account.auth_token, true)
-        var params = {Auth_Token: md5.createHash(newPassword)};
+        var params = {Password: newPassword};
         var update = $http({
         method: 'PUT',
         url: apiPath,
@@ -400,7 +400,7 @@ rcServices.factory('Notifications', function($rootScope, $timeout, $log) {
 'use strict';
 
 var  uiModalDialog = angular.module('ui.bootstrap.modal.dialog', []);
-uiModalDialog.factory('$dialog', ['$rootScope', '$modal', function ($rootScope, $modal) {
+uiModalDialog.factory('$dialog', ['$rootScope', '$uibModal', function ($rootScope, $uibModal) {
 
   var prompt = function(title, message, buttons) {
 
@@ -411,17 +411,17 @@ uiModalDialog.factory('$dialog', ['$rootScope', '$modal', function ($rootScope, 
       ];
     }
 
-    var ModalCtrl = function($scope, $modalInstance) {
+    var ModalCtrl = function($scope, $uibModalInstance) {
       $scope.title = title;
       $scope.message = message;
       $scope.buttons = buttons;
 
       $scope.close = function(result) {
-        $modalInstance.close(result);
+        $uibModalInstance.close(result);
       };
     };
 
-    return $modal.open({
+    return $uibModal.open({
       templateUrl: 'template/dialog/message.html',
       controller: ModalCtrl
     }).result;
@@ -466,6 +466,7 @@ rcServices.factory('RCommAccounts', function($resource) {
       },
       update: {
         method:'PUT',
+        url: '/restcomm/2012-04-24/Accounts.:format/:accountSid',
         headers : {
           'Content-Type': 'application/x-www-form-urlencoded'
         }
@@ -591,6 +592,10 @@ rcServices.factory('RCommLogsMessages', function($resource) {
         headers : {
           'Content-Type': 'application/x-www-form-urlencoded'
         }
+      },
+	  search: {
+        method:'GET',
+        url: '/restcomm/2012-04-24/Accounts/:accountSid/SMS/Messages/:smsMessageSid.:format'
       }
     }
   );
@@ -610,7 +615,11 @@ rcServices.factory('RCommLogsRecordings', function($resource) {
       delete: {
         method:'DELETE',
         url: '/restcomm/2012-04-24/Accounts/:accountSid/Recordings/:recordingSid.:format'
-      }
+      },
+	  search: {
+        method:'GET',
+        url: '/restcomm/2012-04-24/Accounts/:accountSid/Recordings/:recordingSid.:format'
+      }  
     }
   );
 });
@@ -629,7 +638,11 @@ rcServices.factory('RCommLogsNotifications', function($resource) {
       delete: {
         method:'DELETE',
         url: '/restcomm/2012-04-24/Accounts/:accountSid/Notifications/:notificationSid.:format'
-      }
+      },
+	  search: {
+        method:'GET',
+        url: '/restcomm/2012-04-24/Accounts/:accountSid/Notifications/:notificationSid.:format'
+      }      
     }
   );
 });
@@ -647,6 +660,10 @@ rcServices.factory('RCommLogsTranscriptions', function($resource) {
       },
       delete: {
         method:'DELETE',
+        url: '/restcomm/2012-04-24/Accounts/:accountSid/Transcriptions/:transcriptionSid.:format'
+      },
+	  search: {
+        method:'GET',
         url: '/restcomm/2012-04-24/Accounts/:accountSid/Transcriptions/:transcriptionSid.:format'
       }
     }
@@ -682,12 +699,12 @@ rcServices.factory('RCommAvailableNumbers', function($resource) {
       getCountries: {
         method: 'GET',
         isArray: true,
-        url: '/resources/json/countries.:format'
+        url: 'resources/json/countries.:format'
       },
       getAreaCodes: {
         method: 'GET',
         isArray: true,
-        url: '/resources/json/area-codes-:countryCode.:format'
+        url: 'resources/json/area-codes-:countryCode.:format'
       },
       getAvailableCountries: {
         method: 'GET',
@@ -734,6 +751,41 @@ rcServices.factory('RCommIdentityInstances', function ($resource,$http) {
         });
     }
     return instance;
+});
+
+/**
+* Young service to host all functionality regarding applications and projects. Gradually, functionality
+* currently in restcommApps/services.js will be moved here
+*/
+rcServices.factory('Applications', function () {
+
+    function filterByKind(apps, kind) {
+        if (!apps || !kind)
+            return apps;
+        var filtered = [];
+        for (var i=0; i<apps.length; i++) {
+            if (apps[i].kind == kind) {
+                filtered.push(apps[i]);
+            }
+        }
+        return filtered;
+    }
+
+    return {
+        filterByKind: filterByKind
+    }
+});
+
+rcServices.factory('PublicConfig', function ($http) {
+    var config = {};
+    $http({
+        method: 'GET',
+        url: "/conf/dashboard.json",
+    }).then(function (response) {
+        angular.merge(config, response.data); // copy information from response to config object
+    });
+
+    return config;
 });
 
 /*

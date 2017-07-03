@@ -20,6 +20,7 @@ Downloads
 ========
 
 Use [the Docker image](http://documentation.telestax.com/connect/configuration/docker/Restcomm%20-%20Docker%20Quick%20Start%20Guide.html#restcomm-docker/). It only takes a few minutes to set it up and running.
+Alternatively, you can download the [Binary zip](https://github.com/RestComm/Restcomm-Connect/releases/latest) as well
 
 Documentation
 ========
@@ -27,7 +28,7 @@ Read the [Online RestComm Documentation](http://documentation.telestax.com/conne
 
 Want to Contribute ? 
 ========
-[See our Contributors Guide](https://github.com/RestComm/RestComm/wiki/Contribute-to-RestComm) and [How to build RestComm From Source](http://docs.telestax.com/restcomm-mobicents-building-from-source/) and [![Join the chat at https://gitter.im/RestComm/Restcomm-Connect](https://badges.gitter.im/RestComm/Restcomm-Connect.svg)](https://gitter.im/RestComm/Restcomm-Connect?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[See our Contributors Guide](https://github.com/RestComm/RestComm-Connect/CONTRIBUTING.asciidoc) and [How to build RestComm From Source](http://docs.telestax.com/restcomm-mobicents-building-from-source/) and [![Join the chat at https://gitter.im/RestComm/Restcomm-Connect](https://badges.gitter.im/RestComm/Restcomm-Connect.svg)](https://gitter.im/RestComm/Restcomm-Connect?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 
 Issue Tracking and Roadmap

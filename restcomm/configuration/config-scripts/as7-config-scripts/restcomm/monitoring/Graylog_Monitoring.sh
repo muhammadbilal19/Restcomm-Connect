@@ -9,7 +9,7 @@ HDmonitor(){
     hdusage=`df -hP $PWD | awk '/[0-9]%/{print $(NF-1)}'`
     #Send data to graylog
     message={"\"host\"":"\"${SERVERLABEL}\"","\"message\"":"\"${hdusage}\""}
-    curl  -XPOST http://$GRAYLOG_SERVER:5555/gelf -p0 -d ${message}
+    curl  --connect-timeout 10 --max-time 15  -XPOST http://$GRAYLOG_SERVER:5555/gelf -p0 -d ${message}
 }
 
 
@@ -17,11 +17,11 @@ RCJVMonitor(){
     #FInd RMS process number
     rcprocess=$(jps | grep jboss-modules.jar | cut -d " " -f 1)
     #Run JVMTOP
-    jvmvars=` $BASEDIR/../jvmtop.sh -n1 --delay 3  | grep ${rcprocess}  | sed -e "s/  */ /g" | sed -e "s/%//g" | sed -e "s/m//g"  | cut -f3,4,5,6,7,8 -d ' ' `
+    jvmvars=` $BASEDIR/../jvmtop.sh --once  | grep ${rcprocess}  | sed -e "s/  */ /g" | sed -e "s/%//g" | sed -e "s/m//g"  | cut -f3,4,5,6,7,8 -d ' ' `
     #Send data to graylog
     IFS=" " read HPCUR HPMAX NHCUR NHMAX CPU GC <<< $jvmvars
     message={"\"host\"":"\"${SERVERLABEL}\"","\"message\"":"\"RC_JVM_STATS\"","\"_HPCUR\"":"${HPCUR}","\"_HPMAX\"":"${HPMAX}","\"_NHCUR\"":"${NHCUR}","\"_NHMAX\"":"${NHMAX}","\"_CPU\"":"${CPU}","\"_GC\"":"${GC}"}
-    curl  -XPOST http://$GRAYLOG_SERVER:7777/gelf -p0 -d ${message}
+    curl  --connect-timeout 10 --max-time 15   -XPOST http://$GRAYLOG_SERVER:7777/gelf -p0 -d ${message}
 }
 
 
@@ -36,11 +36,11 @@ RMSJVMonitor(){
    done < <(jps | grep Main | cut -d " " -f 1)
 
     #Run JVMTOP
-    jvmvars=` $BASEDIR/../jvmtop.sh -n1 --delay 3  | grep ${msprocess} | sed -e "s/  */ /g" | sed -e "s/%//g" | sed -e "s/m//g" | cut -f3,4,5,6,7,8 -d ' ' `
+    jvmvars=` $BASEDIR/../jvmtop.sh --once  | grep ${msprocess} | sed -e "s/  */ /g" | sed -e "s/%//g" | sed -e "s/m//g" | cut -f3,4,5,6,7,8 -d ' ' `
     #Send data to graylog
     IFS=" " read HPCUR HPMAX NHCUR NHMAX CPU GC <<< $jvmvars
     message={"\"host\"":"\"${SERVERLABEL}\"","\"message\"":"\"MS_JVM_STATS\"","\"_HPCUR\"":"${HPCUR}","\"_HPMAX\"":"${HPMAX}","\"_NHCUR\"":"${NHCUR}","\"_NHMAX\"":"${NHMAX}","\"_CPU\"":"${CPU}","\"_GC\"":"${GC}"}
-    curl  -XPOST http://$GRAYLOG_SERVER:7777/gelf -p0 -d ${message}
+    curl  --connect-timeout 10 --max-time 15   -XPOST http://$GRAYLOG_SERVER:7777/gelf -p0 -d ${message}
 }
 
 SERVERAMonitor(){
@@ -54,7 +54,7 @@ SERVERAMonitor(){
 
     #Send data to graylog
     message={"\"host\"":"\"${SERVERLABEL}\"","\"message\"":"\"Host_Heap\"","\"_MemTotal\"":"${MemTotal}","\"_MemFree\"":"${MemFree}","\"_Buffers\"":"${Buffers}","\"_Cache\"":"${Cache}","\"_SwapTotal\"":"${SwapTotal}","\"_SwapFree\"":"${SwapFree}"}
-    curl  -XPOST http://$GRAYLOG_SERVER:6666/gelf -p0 -d ${message}
+    curl --connect-timeout 10 --max-time 15  -XPOST http://$GRAYLOG_SERVER:6666/gelf -p0 -d ${message}
 }
 
 echo $1
