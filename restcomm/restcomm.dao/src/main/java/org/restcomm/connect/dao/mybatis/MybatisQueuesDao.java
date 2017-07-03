@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
  */
-package org.mobicents.servlet.restcomm.dao.mybatis;
+package org.restcomm.connect.dao.mybatis;
 
 import static org.mobicents.servlet.restcomm.dao.DaoUtils.readDateTime;
 import static org.mobicents.servlet.restcomm.dao.DaoUtils.readInteger;
@@ -38,11 +38,11 @@ import java.util.Map;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.joda.time.DateTime;
-import org.mobicents.servlet.restcomm.dao.QueuesDao;
-import org.mobicents.servlet.restcomm.entities.Queue;
-import org.mobicents.servlet.restcomm.entities.QueueFilter;
-import org.mobicents.servlet.restcomm.entities.QueueRecord;
 import org.mobicents.servlet.restcomm.entities.Sid;
+import org.restcomm.connect.dao.QueuesDao;
+import org.restcomm.connect.dao.entities.Queue;
+import org.restcomm.connect.dao.entities.QueueFilter;
+import org.restcomm.connect.dao.entities.QueueRecord;
 
 import com.cedarsoftware.util.io.JsonReader;
 import com.cedarsoftware.util.io.JsonWriter;

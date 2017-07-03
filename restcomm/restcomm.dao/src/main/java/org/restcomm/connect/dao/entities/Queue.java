@@ -22,9 +22,8 @@ package org.restcomm.connect.dao.entities;
 import java.net.URI;
 
 import org.joda.time.DateTime;
-import org.mobicents.servlet.restcomm.annotations.concurrency.Immutable;
-import org.mobicents.servlet.restcomm.entities.Sid;
-import org.mobicents.servlet.restcomm.entities.Client.Builder;
+import org.restcomm.connect.commons.annotations.concurrency.Immutable;
+import org.restcomm.connect.commons.dao.Sid;
 
 import com.cedarsoftware.util.io.JsonReader;
 

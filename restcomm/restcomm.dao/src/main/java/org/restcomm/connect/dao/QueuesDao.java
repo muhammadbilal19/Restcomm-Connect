@@ -21,10 +21,10 @@ package org.restcomm.connect.dao;
 
 import java.util.List;
 
-import org.mobicents.servlet.restcomm.entities.Queue;
-import org.mobicents.servlet.restcomm.entities.QueueFilter;
-import org.mobicents.servlet.restcomm.entities.QueueRecord;
-import org.mobicents.servlet.restcomm.entities.Sid;
+import org.restcomm.connect.commons.dao.Sid;
+import org.restcomm.connect.dao.entities.Queue;
+import org.restcomm.connect.dao.entities.QueueFilter;
+import org.restcomm.connect.dao.entities.QueueRecord;
 
 /**
  * @author muhammad.bilal19@gmail.com (Muhammad Bilal)

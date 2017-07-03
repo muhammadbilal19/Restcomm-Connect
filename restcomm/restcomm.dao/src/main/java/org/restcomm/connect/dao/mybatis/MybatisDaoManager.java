@@ -46,6 +46,7 @@ import org.restcomm.connect.dao.MediaResourceBrokerDao;
 import org.restcomm.connect.dao.MediaServersDao;
 import org.restcomm.connect.dao.NotificationsDao;
 import org.restcomm.connect.dao.OutgoingCallerIdsDao;
+import org.restcomm.connect.dao.QueuesDao;
 import org.restcomm.connect.dao.RecordingsDao;
 import org.restcomm.connect.dao.RegistrationsDao;
 import org.restcomm.connect.dao.ShortCodesDao;
@@ -86,6 +87,7 @@ public final class MybatisDaoManager implements DaoManager {
     private MediaResourceBrokerDao mediaResourceBrokerDao;
     private ExtensionsConfigurationDao extensionsConfigurationDao;
     private GeolocationDao geolocationDao;
+    private QueuesDao queuesDao;
 
     public MybatisDaoManager() {
         super();
@@ -212,6 +214,11 @@ public final class MybatisDaoManager implements DaoManager {
     public GeolocationDao getGeolocationDao() {
         return geolocationDao;
     }
+    
+    @Override
+    public QueuesDao getQueuesDao() {
+        return queuesDao;
+    }
 
     @Override
     public void shutdown() {
@@ -286,5 +293,6 @@ public final class MybatisDaoManager implements DaoManager {
         mediaResourceBrokerDao = new MybatisMediaResourceBrokerDao(sessions);
         extensionsConfigurationDao = new MybatisExtensionsConfigurationDao(sessions);
         geolocationDao = new MybatisGeolocationDao(sessions);
+        queuesDao = new MybatisQueuesDao(sessions);
     }
 }

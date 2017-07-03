@@ -31,11 +31,11 @@ import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mobicents.servlet.restcomm.dao.QueuesDao;
-import org.mobicents.servlet.restcomm.entities.Queue;
-import org.mobicents.servlet.restcomm.entities.QueueFilter;
-import org.mobicents.servlet.restcomm.entities.QueueRecord;
 import org.mobicents.servlet.restcomm.entities.Sid;
+import org.restcomm.connect.dao.QueuesDao;
+import org.restcomm.connect.dao.entities.Queue;
+import org.restcomm.connect.dao.entities.QueueFilter;
+import org.restcomm.connect.dao.entities.QueueRecord;
 
 /**
  * @author muhammad.bilal19@gmail.com (Muhammad Bilal)
